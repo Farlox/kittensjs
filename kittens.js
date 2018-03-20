@@ -34,7 +34,9 @@ var goi = setInterval(function() {
 
 	// update ui
 	var d = new Date();
-	$(k.panel).find("#mode").text("[" + d.getHours() + ":" + d.getMinutes() + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode);
+	var mode = "[" + d.getHours() + ":" + d.getMinutes() + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode;
+	$(k.panel).find("#mode").html(mode);
+	
 	var msg = "";
 
 	if (k.mode == "off") {
@@ -136,11 +138,14 @@ var goi = setInterval(function() {
 		}
 	}
 	
-	if (k.isFull("science") && 
-	    gamePage.resPool.resourceMap.manuscript.value > 50 &&
-		!k.needmanuscript) {
-		console.log("crafting compendium");
-		gamePage.craft("compedium", 1); // typo intentionally copied from game
+	if (k.isFull("science")) {
+		if (gamePage.resPool.resourceMap.manuscript.value > 50 && !k.needmanuscript) {
+			console.log("crafting compendium");
+			gamePage.craft("compedium", 1); // typo intentionally copied from game
+		}
+		if ($('#k-blueprint-toggle').prop('checked')) {
+			gamePage.craft('blueprint', 1);
+		}
 	}
 	
 	if (k.isFull("titanium") &&
@@ -184,20 +189,31 @@ var goi = setInterval(function() {
 
 	// Assign jobs to jobless kittens based on current needs
 	// TODO: smarter than wood/minerals
+	k.needs = {};
+	k.buildorder.forEach(function(b) { 
+		if (b.canBuild && b.needs.length > 0) { 
+			b.needs.forEach(function(n) { 
+				if (k.needs[n.name] == undefined) k.needs[n.name] = 0;
+				k.needs[n.name] += n.gap; 
+			})
+		}
+	});
+
 	if (gamePage.village.getFreeKittens() > 0) {
-		k.needs = {};
-		k.buildorder.forEach(function(b) { 
-			if (b.canBuild && b.needs.length > 0) { 
-				b.needs.forEach(function(n) { 
-					if (k.needs[n.name] == undefined) k.needs[n.name] = 0;
-					k.needs[n.name] += n.gap; 
-				})
-			}
-		});
-		
 		var jobName = k.needs.wood > k.needs.minerals ? "woodcutter" : "miner";
 		var job = gamePage.village.getJob(jobName);
 		gamePage.village.assignJob(job);
+	} else {
+		// rebalance
+		if (k.needs.wood > k.needs.minerals && gamePage.village.getJob('miner').value >= 15) {
+			this.game.village.sim.removeJob("miner");
+			var job = gamePage.village.getJob("woodcutter");
+			gamePage.village.assignJob(job);
+		} else if (k.needs.minerals > k.needs.wood && gamePage.village.getJob("woodcutter").value >= 15) {
+			this.game.village.sim.removeJob("woodcutter");
+			var job = gamePage.village.getJob("miner");
+			gamePage.village.assignJob(job);
+		}
 	}
 	
 	
@@ -210,9 +226,11 @@ var goi = setInterval(function() {
 
 
 $("#kcode").remove();
-k.panel = $("<div id='kcode'><div id='mode' /><div id='k-msg' /><div id='k-bld' /></div>");
+k.panel = $("<div id='kcode'><div id='mode' /><div id='k-options'><input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' checked /><label for='k-blueprint-toggle'>make blueprints</label></div><div id='k-msg' /><div id='k-bld' /></div>");
 k.panel.append("<style>#kcode { margin-left: 4px; }" +
 				"#kcode #mode::before { color: #808080; content: 'mode: ';}" +
+				"#kcode #k-msg { margin-top: 5px; }" +
+				"#kcode #k-options { margin-top: 5px; }" +
 				"#kcode #k-bld { margin-top: 5px; color: #808080; }" +
 				"</style>");
 $("#leftColumn").append(k.panel);
