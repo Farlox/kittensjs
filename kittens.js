@@ -67,7 +67,7 @@ var goi = setInterval(function() {
 
 	// TODO: toggle to trade with zebras for titanium
     // hunt
-	if (k.isFull("catpower") {
+	if (k.isFull("manpower") {
 		console.log("hunting");
 		gamePage.huntAll({ preventDefault: function(){}})
 	}
