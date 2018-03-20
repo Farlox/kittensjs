@@ -35,6 +35,7 @@ var goi = setInterval(function() {
 	// update ui
 	var d = new Date();
 	$(k.panel).find("#mode").text("[" + d.getHours() + ":" + d.getMinutes() + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode);
+	var msg = "";
 
 	if (k.mode == "off") {
 		console.log("...disabled");
@@ -43,6 +44,7 @@ var goi = setInterval(function() {
     
 	// always observe the sky
 	if ($("input#observeBtn").length == 1) {
+		msg += "sky observed<br/>";
 		console.log("observing the sky");
 		$("input#observeBtn").click();
 	}
@@ -59,6 +61,7 @@ var goi = setInterval(function() {
 				var bld = $(".btnContent:contains(" + bldId.label + ")");
 				if (bld.length == 1 && !bld.parent().hasClass("disabled")) {
 					console.log("building " + bldId.label);
+					msg += "built " + bldId.label + "<br/>";
 					bld.click();
 				}
 			});
@@ -67,7 +70,7 @@ var goi = setInterval(function() {
 
 	// TODO: toggle to trade with zebras for titanium
     // hunt
-	if (k.isFull("manpower") {
+	if (k.isFull("manpower")) {
 		console.log("hunting");
 		gamePage.huntAll({ preventDefault: function(){}})
 	}
@@ -124,7 +127,7 @@ var goi = setInterval(function() {
 		
 		if (gamePage.resPool.resourceMap.furs.value >= parchmentsPerManuscript * fursPerParchment) {
 			console.log("crafting parchment");
-			gamePage.craft("parchment", furs);
+			gamePage.craft("parchment", parchmentsPerManuscript);
 		}
 		if (!k.needparchment && 
 			gamePage.resPool.resourceMap.parchment.value >= parchmentsPerManuscript) {
@@ -140,7 +143,7 @@ var goi = setInterval(function() {
 		gamePage.craft("compedium", 1); // typo intentionally copied from game
 	}
 	
-	if (k.isFull("titanium" &&
+	if (k.isFull("titanium") &&
 	    !k.needsteel) {
 		console.log("crafting alloy");
 		gamePage.craft("alloy", 1);
@@ -179,10 +182,29 @@ var goi = setInterval(function() {
 		}
 	});
 
-	// TODO: Assign jobs to jobless kittens
+	// Assign jobs to jobless kittens based on current needs
+	// TODO: smarter than wood/minerals
+	if (gamePage.village.getFreeKittens() > 0) {
+		k.needs = {};
+		k.buildorder.forEach(function(b) { 
+			if (b.canBuild && b.needs.length > 0) { 
+				b.needs.forEach(function(n) { 
+					if (k.needs[n.name] == undefined) k.needs[n.name] = 0;
+					k.needs[n.name] += n.gap; 
+				})
+			}
+		});
+		
+		var jobName = k.needs.wood > k.needs.minerals ? "woodcutter" : "miner";
+		var job = gamePage.village.getJob(jobName);
+		gamePage.village.assignJob(job);
+	}
+	
+	
 	// TODO: workshop improvements
 	// TODO: Science upgrades
 	
+	$(k.panel).find("#k-msg").html(msg);
 	$(k.panel).find("#k-bld").html(bldStr);
 }, 10000);
 
