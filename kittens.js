@@ -200,22 +200,26 @@ var goi = setInterval(function() {
 	});
 
 	if (gamePage.village.getFreeKittens() > 0) {
-		var jobName = k.needs.wood > k.needs.minerals ? "woodcutter" : "miner";
+		var jobName = (k.needs.wood > k.needs.minerals || k.needs.minerals == undefined) ? "woodcutter" : "miner";
 		var job = gamePage.village.getJob(jobName);
 		gamePage.village.assignJob(job);
 	} else {
 		// rebalance
-		if (k.needs.wood > k.needs.minerals && gamePage.village.getJob('miner').value >= 15) {
+		if ((k.needs.wood > k.needs.minerals || k.needs.minerals == undefined) && 
+			gamePage.village.getJob('miner').value > 15)
+		{
 			this.game.village.sim.removeJob("miner");
 			var job = gamePage.village.getJob("woodcutter");
 			gamePage.village.assignJob(job);
-		} else if (k.needs.minerals > k.needs.wood && gamePage.village.getJob("woodcutter").value >= 15) {
+		}
+		else if ((k.needs.minerals > k.needs.wood || k.needs.woods == undefined) && 
+			gamePage.village.getJob("woodcutter").value > 15)
+		{
 			this.game.village.sim.removeJob("woodcutter");
 			var job = gamePage.village.getJob("miner");
 			gamePage.village.assignJob(job);
 		}
 	}
-	
 	
 	// TODO: workshop improvements
 	// TODO: Science upgrades
