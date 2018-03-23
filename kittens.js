@@ -95,7 +95,7 @@ var goi = setInterval(function() {
 	
 	// UI - update mode header
 	var d = new Date();
-	var mode = "[" + d.getHours() + ":" + d.getMinutes() + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode;
+	var mode = "[" + d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode;
 	$(k.panel).find("#mode").html(mode);
 	
 	// always observe the sky
@@ -305,9 +305,6 @@ var goi = setInterval(function() {
 		}
 	} else {
 		// rebalance woodcutters and miners
-		if (k.needs.wood == undefined || k.needs.wood < 1) k.needs.wood = 1;
-		if (k.needs.minerals == undefined || k.needs.minerals < 1) k.needs.minerals = 1;
-
 		var needRatio = k.needs.wood / k.needs.minerals;
 		var woodcutter = gamePage.village.getJob("woodcutter");
 		var miner = gamePage.village.getJob("miner");
