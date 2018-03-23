@@ -1,5 +1,6 @@
 var k = {
 	mode: "on",
+	logLevel: 2,
 	craftRatio: 1.0,
 	msg: '',
 	needs: [],
@@ -36,10 +37,20 @@ var k = {
 		});
 		return affordable;
 	},
+	haveCap: function(prices) {
+		var cap = true;
+		prices.forEach(function(cost) {
+			var res = gamePage.resPool.resourceMap[cost.name];
+			if (res.maxValue > 0 && cost.val > res.maxValue) {
+				cap = false;
+			}
+		});
+		return cap;
+	},
 	build: function(bldLabel) {
 		var bld = $(".btnContent:contains(" + bldLabel + ")");
 		if (bld.length == 1 && !bld.parent().hasClass("disabled")) {
-			console.log("building " + bldLabel);
+			k.log(2, "building " + bldLabel);
 			k.msg += "built " + bldLabel + "<br/>";
 			bld.click();
 		}
@@ -51,13 +62,18 @@ var k = {
 	popTab: function() {
 		$('a.tab:contains("' + k.prevTab + '")')[0].click();
 		k.prevTab = null;
+	},
+	log: function(level, msg) {
+		if (level >= k.logLevel) {
+			console.log(msg);
+		}
 	}
 };
 
 clearInterval(goi);
 
 var goi = setInterval(function() {
-	console.log("scanning... " + new Date().toTimeString());
+	k.log("scanning... " + new Date().toTimeString());
 	k.msg = '';
 	
 	// INIT mode - beginning of reset
@@ -85,12 +101,12 @@ var goi = setInterval(function() {
 	// always observe the sky
 	if ($("input#observeBtn").length == 1) {
 		k.msg += "sky observed<br/>";
-		console.log("observing the sky");
+		k.log(1, "observing the sky");
 		$("input#observeBtn").click();
 	}
 
     if (k.mode == "min") {
-		console.log("min clicks complete.");
+		k.log(1, "min clicks complete.");
 		return;
 	}
 
@@ -143,15 +159,26 @@ var goi = setInterval(function() {
 	gamePage.science.techs.forEach(function(tech) { 
 		if (tech.unlocked && 
 			!tech.researched &&
-			k.canAfford(tech.prices)) {
+			k.haveCap(tech.prices)) {
 			
+			tech.gap = [];
+			tech.prices.forEach(function(cost) {
+				var res = gamePage.resPool.resourceMap[cost.name];
+				if (cost.val > res.value) {
+					tech.gap.push({
+						name: cost.name,
+						affordable: k.canAfford(tech.prices),
+						gap: cost.val - res.value
+					});
+				}
+			});
+
 			k.techs.push(tech);
-			console.log("Affordable: " + tech.label);
+			k.log(0, "Affordable: " + tech.label);
 		}
 	});
 	
 	// calculate aggregate needs
-	// TODO: k.needs should be an array
 	k.needs = [];
 	k.buildorder.forEach(function(b) { 
 		if (b.canBuild && b.needs.length > 0) { 
@@ -162,18 +189,19 @@ var goi = setInterval(function() {
 		}
 	});
 
-    // hunt
+    // hunt and trade
 	if (k.isFull("manpower")) {
 		// TODO: remove k.trade in favor of a toggle or logic
+		// TODO: explore for trading partners
 		if (k.trade) {
 			var zebras = gamePage.diplomacy.get('zebras')
 			if (zebras != undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
-				console.log("trading with zebras");
+				k.log(1, "trading with zebras");
 				gamePage.diplomacy.tradeAll(zebras);
 			}
 		}
 		if (gamePage.resPool.resourceMap.manpower.value >= 100) {
-			console.log("hunting");
+			k.log(1, "hunting");
 			gamePage.huntAll({ preventDefault: function(){}})
 		}
 	}
@@ -182,43 +210,43 @@ var goi = setInterval(function() {
 	// TODO: claim religious upgrades
 	// TODO: unicorn sacrifice
 	if (k.isFull("faith")) {
-		console.log("Praise the sun!");
+		k.log(1, "Praise the sun!");
 		gamePage.religionTab.praiseBtn.onClick();
 	}
 	
 	// crafting
 	if (k.isFull("wood")) {
-		console.log("crafting beams");
+		k.log(1, "crafting beams");
 		gamePage.craft("beam", 1 * k.craftRatio);
 	}
 
 	if (k.isFull("catnip")) {
-		console.log("crafting wood");
+		k.log(1, "crafting wood");
 		gamePage.craft("wood", 10 * k.craftRatio);
 	}
 
 	if (k.isFull("wood")) {
-		console.log("crafting beams");
+		k.log(1, "crafting beams");
 		gamePage.craft("beam", 1 * k.craftRatio);
 	}
 
 	if (k.isFull("minerals")) {
-		console.log("crafting slabs");
+		k.log(1, "crafting slabs");
 		gamePage.craft("slab", 1 * k.craftRatio);
 	}
 
 	if (!gamePage.resPool.resourceMap.coal.unlocked) {
 		if (k.isFull("iron")) {
-			console.log("crafting plates");
+			k.log(1, "crafting plates");
 			gamePage.craft("plate", 1 * k.craftRatio);
 		}
 	} else {
 		if (k.isFull("coal") || k.isFull("iron")) {
 			if (gamePage.resPool.resourceMap.coal.value > 100) {
-				console.log("crafting steel");
+				k.log(1, "crafting steel");
 				gamePage.craftAll("steel")
 			} else {
-				console.log("crafting plates");
+				k.log(1, "crafting plates");
 				gamePage.craft("plate", 1 * k.craftRatio);
 			}
 		}
@@ -231,12 +259,12 @@ var goi = setInterval(function() {
 		var parchmentsPerManuscript = 25;
 		
 		if (gamePage.resPool.resourceMap.furs.value >= parchmentsPerManuscript * fursPerParchment) {
-			console.log("crafting parchment");
+			k.log(1, "crafting parchment");
 			gamePage.craft("parchment", parchmentsPerManuscript);
 		}
 		if ($('k-manuscript-toggle').prop('checked') && 
 			gamePage.resPool.resourceMap.parchment.value >= parchmentsPerManuscript) {
-			console.log("crafting manuscript");
+			k.log(1, "crafting manuscript");
 			gamePage.craft("manuscript", 1);
 		}
 	}
@@ -244,20 +272,20 @@ var goi = setInterval(function() {
 	if (k.isFull("science")) {
 		if ($('k-compendium-toggle').prop('checked') &&
 			gamePage.resPool.resourceMap.manuscript.value > 50) {
-			console.log("crafting compendium");
+			k.log(1, "crafting compendium");
 			gamePage.craft("compedium", 1); // typo intentionally copied from game
 		}
 		if ($('#k-blueprint-toggle').prop('checked') &&
 			gamePage.resPool.resourceMap.compedium.value >= 25) 
 		{
-			console.log("crafting blueprint");
+			k.log(1, "crafting blueprint");
 			gamePage.craft('blueprint', 1);
 		}
 	}
 
 	if (k.isFull("titanium") &&
 	    $('#k-alloy-toggle').prop('checked')) {
-		console.log("crafting alloy");
+		k.log(1, "crafting alloy");
 		gamePage.craft("alloy", 1);
 	}
 	
@@ -266,13 +294,13 @@ var goi = setInterval(function() {
 		var farmer = gamePage.village.getJob('farmer');
 		if (farmer.value < 2) {
 			// get some farmers at beginning of game
-			console.log('assigning farmer');
+			k.log(1, 'assigning farmer');
 			gamePage.village.assignJob(farmer);
 		} else {
 			// TODO: smarter than wood/minerals
 			var jobName = (k.needs.wood > k.needs.minerals || k.needs.minerals == undefined) ? "woodcutter" : "miner";
 			var job = gamePage.village.getJob(jobName);
-			console.log('assigning ' + jobName);
+			k.log(1, 'assigning ' + jobName);
 			gamePage.village.assignJob(job);
 		}
 	} else {
@@ -287,11 +315,11 @@ var goi = setInterval(function() {
 
 		if (needRatio > jobRatio && miner.value > 1) { 
 			this.game.village.sim.removeJob("miner");
-			console.log('assigning ' + woodcutter.name);
+			k.log(1, 'assigning ' + woodcutter.name);
 			gamePage.village.assignJob(woodcutter);
 		} else if (needRatio < jobRatio && woodcutter.value > 1) {
 			this.game.village.sim.removeJob("woodcutter");
-			console.log('assigning ' + miner.name);
+			k.log(1, 'assigning ' + miner.name);
 			gamePage.village.assignJob(miner);
 		}
 	}
@@ -303,7 +331,7 @@ var goi = setInterval(function() {
 				!btn.model.metadata.researched &&
 				k.canAfford(btn.model.prices)) {
 					k.pushTab('Workshop');
-					console.log('upgrading ' + btn.model.name);
+					k.log(2, 'upgrading ' + btn.model.name);
 					k.msg += "upgraded " + btn.model.name + "<br/>";
 					btn.buttonContent.click();
 					k.popTab();
@@ -318,7 +346,7 @@ var goi = setInterval(function() {
 				!btn.model.metadata.researched &&
 				k.canAfford(btn.model.prices)) {
 				k.pushTab('Science');
-				console.log("researching " + btn.model.name);
+				k.log(2, "researching " + btn.model.name);
 				k.msg += "researched " + btn.model.name + "<br/>";
 				btn.buttonContent.click();
 				k.popTab();
