@@ -238,7 +238,7 @@ var goi = setInterval(function() {
 			gamePage.craft("scaffold", k.needs.scaffold);
 		} else {
 			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / 50;
-			gamePage.craft("scaffold", )
+			gamePage.craft("scaffold", n)
 		}
 	}
 
@@ -274,7 +274,7 @@ var goi = setInterval(function() {
 			k.log(1, "crafting parchment");
 			gamePage.craft("parchment", parchmentsPerManuscript);
 		}
-		if ($('k-manuscript-toggle').prop('checked') && 
+		if ($('#k-manuscript-toggle').prop('checked') && 
 			gamePage.resPool.resourceMap.parchment.value >= parchmentsPerManuscript) {
 			k.log(1, "crafting manuscript");
 			gamePage.craft("manuscript", 1);
@@ -282,7 +282,7 @@ var goi = setInterval(function() {
 	}
 	
 	if (k.isFull("science")) {
-		if ($('k-compendium-toggle').prop('checked') &&
+		if ($('#k-compendium-toggle').prop('checked') &&
 			gamePage.resPool.resourceMap.manuscript.value > 50) {
 			k.log(1, "crafting compendium");
 			gamePage.craft("compedium", 1); // typo intentionally copied from game
@@ -322,11 +322,12 @@ var goi = setInterval(function() {
 		var miner = gamePage.village.getJob("miner");
 		var jobRatio = woodcutter.value / miner.value;
 
-		if (needRatio > jobRatio && miner.value > 1) { 
+        var minWorking = 0.1 * gamePage.village.sim.getKittens();
+		if (needRatio > jobRatio && miner.value > minWorking) { 
 			this.game.village.sim.removeJob("miner");
 			k.log(1, 'assigning ' + woodcutter.name);
 			gamePage.village.assignJob(woodcutter);
-		} else if (needRatio < jobRatio && woodcutter.value > 1) {
+		} else if (needRatio < jobRatio && woodcutter.value > minWorking) {
 			this.game.village.sim.removeJob("woodcutter");
 			k.log(1, 'assigning ' + miner.name);
 			gamePage.village.assignJob(miner);
