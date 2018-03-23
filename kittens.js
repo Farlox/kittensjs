@@ -230,6 +230,18 @@ var goi = setInterval(function() {
 		gamePage.craft("beam", 1 * k.craftRatio);
 	}
 
+	if (k.needs.scaffold > 0 &&
+		gamePage.resPool.resourceMap.beam.value > gamePage.resPool.resourceMap.wood.maxValue) {
+		k.log(1, "crafting scaffold");
+
+		if ((k.needs.scaffold * 50 / gamePage.resPool.resourceMap.beam.value) < 0.05) {
+			gamePage.craft("scaffold", k.needs.scaffold);
+		} else {
+			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / 50;
+			gamePage.craft("scaffold", )
+		}
+	}
+
 	if (k.isFull("minerals")) {
 		k.log(1, "crafting slabs");
 		gamePage.craft("slab", 1 * k.craftRatio);
