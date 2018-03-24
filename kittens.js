@@ -22,7 +22,7 @@ var k = {
 		{ label: "Barn", name: "barn" },
 		{ label: "Workshop", name: "workshop" },
 		{ label: "Tradepost", name: "tradepost" },
-//      { label: "Amphitheatre", name: "amphitheatre" },
+        { label: "Amphitheatre", name: "amphitheatre" },
 		{ label: "Aqueduct", name: "aqueduct" },
 	],
 	isFull: function(resName) {
@@ -85,12 +85,6 @@ var goi = setInterval(function() {
 		return;
 	}
 
-	/*
-	if (gamePage.bld.get('pasture').val < 20 &&
-		gamePage.calendar.season < 2) {
-		k.build('Pasture');
-	}*/
-	
 	// TODO: scale k.craftRatio
 	
 	// UI - update mode header
@@ -115,8 +109,14 @@ var goi = setInterval(function() {
 		if ($("a.tab.activeTab")[0].innerText == "Bonfire") {
 			k.buildorder.forEach(function(bldId) {
 				k.build(bldId.label);
-			});
-		}
+            });
+            
+            var w = gamePage.bld.get('warehouse');
+            if (gamePage.resPool.resourceMap[w.prices[0].name].value * 0.1 > w.prices[0].val &&
+                gamePage.resPool.resourceMap[w.prices[1].name].value * 0.1 > w.prices[1].val) {
+                k.build(w.label);
+            }
+        }
 	}
 
 	// find affordable buildings
@@ -174,9 +174,8 @@ var goi = setInterval(function() {
 			});
 
 			k.techs.push(tech);
-			k.log(0, "Affordable: " + tech.label);
 		}
-	});
+    });
 	
 	// calculate aggregate needs
 	k.needs = [];
@@ -188,6 +187,16 @@ var goi = setInterval(function() {
 			})
 		}
 	});
+    k.techs.forEach(function(tech) {
+        if (tech.gap.length > 0) {
+            tech.gap.forEach(function(gap) {
+                if (!gap.affordable) {
+                    if (k.needs[gap.name] == undefined) k.needs[gap.name] = 0;
+                    k.needs[gap.name] += gap.gap;
+                }
+            });
+        }
+    });
 
     // hunt and trade
 	if (k.isFull("manpower")) {
@@ -263,9 +272,14 @@ var goi = setInterval(function() {
 			}
 		}
 	}
-	
-	// TODO: currently only make parchments for manuscripts.  Early game we need parchment for amphitheaters (for first culture)
-	
+
+    // TODO: BLOCKER: currently only make parchments for manuscripts.  Early game we need parchment for amphitheaters (for first culture)
+    // Amphitheatre isn't on the buildorder list, may need to add
+    if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > 525) {
+        k.log(1, "crafting parchment");
+        gamePage.craftAll("parchment");
+    }
+
 	if (k.isFull("culture")) {
 		var fursPerParchment = 175;
 		var parchmentsPerManuscript = 25;
@@ -317,17 +331,19 @@ var goi = setInterval(function() {
 		}
 	} else {
 		// rebalance woodcutters and miners
-		var needRatio = k.needs.wood / k.needs.minerals;
+        var needRatio = k.needs.wood / k.needs.minerals;
+        var productionRatio = gamePage.resPool.resourceMap.wood.perTickCached / gamePage.resPool.resourceMap.minerals.perTickCached;
+
 		var woodcutter = gamePage.village.getJob("woodcutter");
 		var miner = gamePage.village.getJob("miner");
 		var jobRatio = woodcutter.value / miner.value;
 
         var minWorking = 0.1 * gamePage.village.sim.getKittens();
-		if (needRatio > jobRatio && miner.value > minWorking) { 
+		if (needRatio > productionRatio && miner.value > minWorking) { 
 			this.game.village.sim.removeJob("miner");
 			k.log(1, 'assigning ' + woodcutter.name);
 			gamePage.village.assignJob(woodcutter);
-		} else if (needRatio < jobRatio && woodcutter.value > minWorking) {
+		} else if (needRatio < productionRatio && woodcutter.value > minWorking) {
 			this.game.village.sim.removeJob("woodcutter");
 			k.log(1, 'assigning ' + miner.name);
 			gamePage.village.assignJob(miner);
