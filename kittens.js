@@ -5,7 +5,7 @@
 var k = {
 	mode: "on",
 	logLevel: 2,
-	craftRatio: 1.0,
+	craftRatio: 5.0,
 	msg: '',
 	needs: [],
 	buildorder:
@@ -127,6 +127,14 @@ var goi = setInterval(function() {
 				k.build(bldId.label);
             });
             
+            var m = gamePage.bld.getPrices('mansion');
+            if (k.canAfford(m) && 
+                m[0].val < gamePage.resPool.resourceMap.slab.value * 0.1 &&
+                m[2].val < gamePage.resPool.resourceMap.titanium.maxValue * 0.1)
+            {
+                k.build('Mansion');
+            }
+
             var w = gamePage.bld.getPrices('warehouse');
             if (gamePage.resPool.resourceMap[w[0].name].value * 0.1 > w[0].val &&
                 gamePage.resPool.resourceMap[w[1].name].value * 0.1 > w[1].val) {
@@ -331,7 +339,7 @@ var goi = setInterval(function() {
 	}
 
 	if (k.needs.scaffold > 0 &&
-		gamePage.resPool.resourceMap.beam.value > gamePage.resPool.resourceMap.wood.maxValue) {
+		gamePage.resPool.resourceMap.beam.value > 0.5 * gamePage.resPool.resourceMap.wood.maxValue) {
 		k.log(1, "crafting scaffold");
 
 		if ((k.needs.scaffold * 50 / gamePage.resPool.resourceMap.beam.value) < 0.05) {
