@@ -1,3 +1,7 @@
+// TODO:
+// make megalith/ziggurat
+// explore for trade
+
 var k = {
 	mode: "on",
 	logLevel: 2,
@@ -18,7 +22,6 @@ var k = {
 		{ label: "Temple", name: "temple" },
 		{ label: "Observatory", name: "observatory" },
 		{ label: "Smelter", name: "smelter" },
-//		{ label: "Warehouse", name: "warehouse" },
 		{ label: "Barn", name: "barn" },
 		{ label: "Workshop", name: "workshop" },
 		{ label: "Tradepost", name: "tradepost" },
@@ -54,7 +57,11 @@ var k = {
 			k.msg += "built " + bldLabel + "<br/>";
 			bld.click();
 		}
-	},
+    },
+    assign: function(job) {
+        k.log(1, 'assigning ' + job.name);
+        gamePage.village.assignJob(job);
+    },
 	pushTab: function(tab) {
 		k.prevTab = $("a.tab.activeTab")[0].innerText;
 		$('a.tab:contains("' + tab + '")')[0].click();
@@ -76,8 +83,10 @@ var goi = setInterval(function() {
 	k.log("scanning... " + new Date().toTimeString());
 	k.msg = '';
 	
-	// INIT mode - beginning of reset
-	if (gamePage.bld.get('field').val < 50) {
+    // **********************************************************
+    // INIT mode - beginning of reset
+    // **********************************************************
+    if (gamePage.bld.get('field').val < 50) {
 		$(k.panel).find('#mode').html('INIT');
 		$(k.panel).find('#k-msg').html('');
 
@@ -87,13 +96,17 @@ var goi = setInterval(function() {
 
 	// TODO: scale k.craftRatio
 	
-	// UI - update mode header
-	var d = new Date();
+    // **********************************************************
+    // UI - update ui header
+    // **********************************************************
+    var d = new Date();
 	var mode = "[" + d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2) + "] " + k.mode;
 	$(k.panel).find("#mode").html(mode);
 	
-	// always observe the sky
-	if ($("input#observeBtn").length == 1) {
+    // **********************************************************
+    // always observe the sky
+    // **********************************************************
+    if ($("input#observeBtn").length == 1) {
 		k.msg += "sky observed<br/>";
 		k.log(1, "observing the sky");
 		$("input#observeBtn").click();
@@ -104,22 +117,67 @@ var goi = setInterval(function() {
 		return;
 	}
 
-	// build
+    // **********************************************************
+    // BUILD, RESEARCH, UPGRADE
+    // **********************************************************
+    // buildings
     if (k.mode != "nobuild") {	
 		if ($("a.tab.activeTab")[0].innerText == "Bonfire") {
 			k.buildorder.forEach(function(bldId) {
 				k.build(bldId.label);
             });
             
-            var w = gamePage.bld.get('warehouse');
-            if (gamePage.resPool.resourceMap[w.prices[0].name].value * 0.1 > w.prices[0].val &&
-                gamePage.resPool.resourceMap[w.prices[1].name].value * 0.1 > w.prices[1].val) {
-                k.build(w.label);
+            var w = gamePage.bld.getPrices('warehouse');
+            if (gamePage.resPool.resourceMap[w[0].name].value * 0.1 > w[0].val &&
+                gamePage.resPool.resourceMap[w[1].name].value * 0.1 > w[1].val) {
+                k.build('Warehouse');
+            }
+
+            var h = gamePage.bld.getPrices('harbor');
+            if (gamePage.resPool.resourceMap[h[0].name].value * 0.1 > h[0].val &&
+                gamePage.resPool.resourceMap[h[1].name].value * 0.1 > h[1].val &&
+                gamePage.resPool.resourceMap[h[2].name].value * 0.1 > h[2].val) {
+                k.build('Harbour');
             }
         }
 	}
 
-	// find affordable buildings
+    // Workshop improvements
+	if (gamePage.workshopTab.visible) {
+		gamePage.workshopTab.buttons.forEach(function(btn) {
+			if (btn.model.metadata.unlocked &&
+				!btn.model.metadata.researched &&
+				k.canAfford(btn.model.prices)) {
+					k.pushTab('Workshop');
+					k.log(2, 'upgrading ' + btn.model.name);
+					k.msg += "upgraded " + btn.model.name + "<br/>";
+					btn.buttonContent.click();
+					k.popTab();
+				}
+		});
+	}
+
+	// Science research
+	if (gamePage.libraryTab.visible) {
+		gamePage.libraryTab.buttons.forEach(function(btn) {
+			if (btn.model.metadata.unlocked && 
+				!btn.model.metadata.researched &&
+				k.canAfford(btn.model.prices)) {
+				k.pushTab('Science');
+				k.log(2, "researching " + btn.model.name);
+				k.msg += "researched " + btn.model.name + "<br/>";
+				btn.buttonContent.click();
+				k.popTab();
+			}
+		});
+	}
+
+
+    // **********************************************************
+    // Calculate needs
+    // **********************************************************
+
+    // find affordable buildings
 	var bldStr = "now building...<br/>";
 	
     k.buildorder.forEach(function(bld) {
@@ -159,8 +217,8 @@ var goi = setInterval(function() {
 	gamePage.science.techs.forEach(function(tech) { 
 		if (tech.unlocked && 
 			!tech.researched &&
-			k.haveCap(tech.prices)) {
-			
+            k.haveCap(tech.prices))
+            {
 			tech.gap = [];
 			tech.prices.forEach(function(cost) {
 				var res = gamePage.resPool.resourceMap[cost.name];
@@ -176,6 +234,27 @@ var goi = setInterval(function() {
 			k.techs.push(tech);
 		}
     });
+
+    k.upgrades = [];
+    gamePage.workshop.upgrades.forEach(function(up) {
+        if (up.unlocked &&
+            !up.researched &&
+            k.haveCap(up.prices))
+        {
+            up.gap = [];
+			up.prices.forEach(function(cost) {
+				var res = gamePage.resPool.resourceMap[cost.name];
+				if (cost.val > res.value) {
+					up.gap.push({
+						name: cost.name,
+						affordable: k.canAfford(up.prices),
+						gap: cost.val - res.value
+					});
+				}
+			});
+
+			k.upgrades.push(up);        }
+    });
 	
 	// calculate aggregate needs
 	k.needs = [];
@@ -190,6 +269,16 @@ var goi = setInterval(function() {
     k.techs.forEach(function(tech) {
         if (tech.gap.length > 0) {
             tech.gap.forEach(function(gap) {
+                if (!gap.affordable) {
+                    if (k.needs[gap.name] == undefined) k.needs[gap.name] = 0;
+                    k.needs[gap.name] += gap.gap;
+                }
+            });
+        }
+    });
+    k.upgrades.forEach(function(up) {
+        if (up.gap.length > 0) {
+            up.gap.forEach(function(gap) {
                 if (!gap.affordable) {
                     if (k.needs[gap.name] == undefined) k.needs[gap.name] = 0;
                     k.needs[gap.name] += gap.gap;
@@ -223,7 +312,9 @@ var goi = setInterval(function() {
 		gamePage.religionTab.praiseBtn.onClick();
 	}
 	
-	// crafting
+    // **********************************************************
+    // 2. CRAFTING
+    // **********************************************************
 	if (k.isFull("wood")) {
 		k.log(1, "crafting beams");
 		gamePage.craft("beam", 1 * k.craftRatio);
@@ -271,7 +362,14 @@ var goi = setInterval(function() {
 				gamePage.craft("plate", 1 * k.craftRatio);
 			}
 		}
-	}
+    }
+    
+    if (k.needs.gear > 0 &&
+        gamePage.resPool.resourceMap.steel.value >= 0.5 * gamePage.resPool.resourceMap.iron.maxValue)
+    {
+        k.log(1, 'crafting gear');
+        gamePage.craft('gear', 1 * k.craftRatio);
+    }
 
     // TODO: BLOCKER: currently only make parchments for manuscripts.  Early game we need parchment for amphitheaters (for first culture)
     // Amphitheatre isn't on the buildorder list, may need to add
@@ -315,70 +413,62 @@ var goi = setInterval(function() {
 		gamePage.craft("alloy", 1);
 	}
 	
-	// Assign jobs to jobless kittens based on current needs
-	if (gamePage.village.getFreeKittens() > 0) {
-		var farmer = gamePage.village.getJob('farmer');
-		if (farmer.value < 2) {
-			// get some farmers at beginning of game
-			k.log(1, 'assigning farmer');
-			gamePage.village.assignJob(farmer);
-		} else {
-			// TODO: smarter than wood/minerals
-			var jobName = (k.needs.wood > k.needs.minerals || k.needs.minerals == undefined) ? "woodcutter" : "miner";
-			var job = gamePage.village.getJob(jobName);
-			k.log(1, 'assigning ' + jobName);
-			gamePage.village.assignJob(job);
-		}
-	} else {
-		// rebalance woodcutters and miners
-        var needRatio = k.needs.wood / k.needs.minerals;
-        var productionRatio = gamePage.resPool.resourceMap.wood.perTickCached / gamePage.resPool.resourceMap.minerals.perTickCached;
+    // **********************************************************
+    // Rebalance jobs and ensure no jobless kittens 
+    // **********************************************************
+    var farmer = gamePage.village.getJob('farmer');
 
-		var woodcutter = gamePage.village.getJob("woodcutter");
-		var miner = gamePage.village.getJob("miner");
-		var jobRatio = woodcutter.value / miner.value;
+    var woodcutter = gamePage.village.getJob("woodcutter");
+    var miner = gamePage.village.getJob("miner");
+    var scholar = gamePage.village.getJob("scholar");
+    var jobTot = woodcutter.value + miner.value + scholar.value;
 
-        var minWorking = 0.1 * gamePage.village.sim.getKittens();
-		if (needRatio > productionRatio && miner.value > minWorking) { 
-			this.game.village.sim.removeJob("miner");
-			k.log(1, 'assigning ' + woodcutter.name);
-			gamePage.village.assignJob(woodcutter);
-		} else if (needRatio < productionRatio && woodcutter.value > minWorking) {
-			this.game.village.sim.removeJob("woodcutter");
-			k.log(1, 'assigning ' + miner.name);
-			gamePage.village.assignJob(miner);
-		}
-	}
-	
-	// Workshop improvements
-	if (gamePage.workshopTab.visible) {
-		gamePage.workshopTab.buttons.forEach(function(btn) {
-			if (btn.model.metadata.unlocked &&
-				!btn.model.metadata.researched &&
-				k.canAfford(btn.model.prices)) {
-					k.pushTab('Workshop');
-					k.log(2, 'upgrading ' + btn.model.name);
-					k.msg += "upgraded " + btn.model.name + "<br/>";
-					btn.buttonContent.click();
-					k.popTab();
-				}
-		});
-	}
+    k.needs.tot = 0;
+    if (k.needs.wood) k.needs.tot += k.needs.wood;
+    if (k.needs.minerals) k.needs.tot += k.needs.minerals;
+    if (k.needs.science) k.needs.tot += k.needs.science;
+    
+    var productionTotal = gamePage.resPool.resourceMap.wood.perTickCached +
+                          gamePage.resPool.resourceMap.minerals.perTickCached +
+                          gamePage.resPool.resourceMap.science.perTickCached;
 
-	// Science upgrades
-	if (gamePage.libraryTab.visible && k.techs.length > 0) {
-		gamePage.libraryTab.buttons.forEach(function(btn) {
-			if (btn.model.metadata.unlocked && 
-				!btn.model.metadata.researched &&
-				k.canAfford(btn.model.prices)) {
-				k.pushTab('Science');
-				k.log(2, "researching " + btn.model.name);
-				k.msg += "researched " + btn.model.name + "<br/>";
-				btn.buttonContent.click();
-				k.popTab();
-			}
-		});
-	}
+    var minWorking = 0.1 * gamePage.village.sim.getKittens();
+
+    var woodLow = k.needs.wood / k.needs.tot > gamePage.resPool.resourceMap.wood.perTickCached / productionTotal;
+    var mineralsLow = k.needs.minerals / k.needs.tot > gamePage.resPool.resourceMap.minerals.perTickCached / productionTotal;
+    var scienceLow = k.needs.science / k.needs.tot > gamePage.resPool.resourceMap.science.perTickCached / productionTotal;
+
+    if (woodLow || mineralsLow || scienceLow) {
+        // remove if production surplus
+        if (woodcutter.value > minWorking &&
+            (!k.needs.wood || !woodLow))
+        {
+            this.game.village.sim.removeJob(woodcutter.name);
+        }
+        if (miner.value > minWorking &&
+            (!k.needs.minerals || !mineralsLow))
+        {
+        this.game.village.sim.removeJob(miner.name);
+        }
+        if (scholar.value > minWorking &&
+            (!k.needs.science || !scienceLow))
+        {
+            this.game.village.sim.removeJob(scholar.name);
+        }
+
+        // fill up where needed
+        while (gamePage.village.getFreeKittens() > 0) {
+            if (farmer.value < 2 || (gamePage.resPool.resourceMap.catnip.perTickCached <= 0 && gamePage.calendar.season < 3)) {
+                k.assign(farmer);
+            } else if (woodLow) {
+                k.assign(woodcutter);
+            } else if (mineralsLow) {
+                k.assign(miner);
+            } else if (scienceLow) {
+                k.assign(scholar);
+            }
+        }
+    }
 	
 	$(k.panel).find("#k-msg").html(k.msg);
 	$(k.panel).find("#k-bld").html(bldStr);
