@@ -128,8 +128,7 @@ var goi = setInterval(function() {
             });
             
             var m = gamePage.bld.getPrices('mansion');
-            if (k.canAfford(m) && 
-                m[0].val < gamePage.resPool.resourceMap.slab.value * 0.1 &&
+            if (m[0].val < gamePage.resPool.resourceMap.slab.value * 0.1 &&
                 m[2].val < gamePage.resPool.resourceMap.titanium.maxValue * 0.1)
             {
                 k.build('Mansion');
@@ -151,7 +150,7 @@ var goi = setInterval(function() {
 	}
 
     // Workshop improvements
-	if (gamePage.workshopTab.visible) {
+	if (gamePage.workshopTab.visible {
 		gamePage.workshopTab.buttons.forEach(function(btn) {
 			if (btn.model.metadata.unlocked &&
 				!btn.model.metadata.researched &&
@@ -436,17 +435,21 @@ var goi = setInterval(function() {
     if (k.needs.minerals) k.needs.tot += k.needs.minerals;
     if (k.needs.science) k.needs.tot += k.needs.science;
     
-    var productionTotal = gamePage.resPool.resourceMap.wood.perTickCached +
-                          gamePage.resPool.resourceMap.minerals.perTickCached +
-                          gamePage.resPool.resourceMap.science.perTickCached;
+    var foodProd = gamePage.getResourcePerTick('catnip', true);
+    var woodProd = gamePage.getResourcePerTick('wood', true);
+    var mineralsProd = gamePage.getResourcePerTick('minerals', true);
+    var scienceProd = gamePage.getResourcePerTick('science', true);
+
+    var productionTotal =  woodProd + mineralsProd + scienceProd;
 
     var minWorking = 0.1 * gamePage.village.sim.getKittens();
 
-    var woodLow = k.needs.wood / k.needs.tot > gamePage.resPool.resourceMap.wood.perTickCached / productionTotal;
-    var mineralsLow = k.needs.minerals / k.needs.tot > gamePage.resPool.resourceMap.minerals.perTickCached / productionTotal;
-    var scienceLow = k.needs.science / k.needs.tot > gamePage.resPool.resourceMap.science.perTickCached / productionTotal;
-
-    if (woodLow || mineralsLow || scienceLow) {
+    var foodLow = farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
+    var woodLow = k.needs.wood / k.needs.tot > woodProd / productionTotal;
+    var mineralsLow = k.needs.minerals / k.needs.tot > mineralsProd / productionTotal;
+    var scienceLow = k.needs.science / k.needs.tot > scienceProd / productionTotal;
+    
+    if (foodLow || woodLow || mineralsLow || scienceLow) {
         // remove if production surplus
         if (woodcutter.value > minWorking &&
             (!k.needs.wood || !woodLow))
@@ -456,7 +459,7 @@ var goi = setInterval(function() {
         if (miner.value > minWorking &&
             (!k.needs.minerals || !mineralsLow))
         {
-        this.game.village.sim.removeJob(miner.name);
+            this.game.village.sim.removeJob(miner.name);
         }
         if (scholar.value > minWorking &&
             (!k.needs.science || !scienceLow))
@@ -466,7 +469,7 @@ var goi = setInterval(function() {
 
         // fill up where needed
         while (gamePage.village.getFreeKittens() > 0) {
-            if (farmer.value < 2 || (gamePage.resPool.resourceMap.catnip.perTickCached <= 0 && gamePage.calendar.season < 3)) {
+            if (foodLow) {
                 k.assign(farmer);
             } else if (woodLow) {
                 k.assign(woodcutter);
