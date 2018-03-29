@@ -28,6 +28,14 @@ var k = {
         { label: "Amphitheatre", name: "amphitheatre" },
 		{ label: "Aqueduct", name: "aqueduct" },
 	],
+	craftorder:
+	[
+		{ raw: "wood", refined: "beam", val: 1 },
+		{ raw: "catnip", refined: "wood", val: 10},
+		{ raw: "wood", refined: "beam", val: 1 },
+		{ raw: "minerals", refined: "slab", val: 1},
+		{ raw: "titanium", refined: "alloy", val: 1}
+	],
 	isFull: function(resName) {
 		return (gamePage.resPool.resourceMap[resName].value / gamePage.resPool.resourceMap[resName].maxValue) >= 0.95
 	},
@@ -150,7 +158,7 @@ var goi = setInterval(function() {
 	}
 
     // Workshop improvements
-	if (gamePage.workshopTab.visible {
+	if (gamePage.workshopTab.visible) {
 		gamePage.workshopTab.buttons.forEach(function(btn) {
 			if (btn.model.metadata.unlocked &&
 				!btn.model.metadata.researched &&
@@ -179,6 +187,27 @@ var goi = setInterval(function() {
 		});
 	}
 
+	// religion
+	// TODO: unicorn sacrifice
+	if (gamePage.religionTab.visible) {
+		gamePage.religionTab.rUpgradeButtons.forEach(function(btn) {
+			if (btn.model.visible &&
+				btn.model.on == 0 &&
+				k.canAfford(btn.model.prices))
+			{
+				k.pushTab('Religion');
+				k.log(2, "praying for " + btn.model.name);
+				k.msg += "prayed for " + btn.model.name + "<br/>";
+				btn.buttonContent.click();
+				k.popTab();
+			}
+		});
+	}
+
+	if (k.isFull("faith")) {
+		k.log(1, "Praise the sun!");
+		gamePage.religionTab.praiseBtn.onClick();
+	}
 
     // **********************************************************
     // Calculate needs
@@ -296,46 +325,28 @@ var goi = setInterval(function() {
 
     // hunt and trade
 	if (k.isFull("manpower")) {
-		// TODO: remove k.trade in favor of a toggle or logic
 		// TODO: explore for trading partners
-		if (k.trade) {
-			var zebras = gamePage.diplomacy.get('zebras')
-			if (zebras != undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
-				k.log(1, "trading with zebras");
-				gamePage.diplomacy.tradeAll(zebras);
-			}
-		}
-		if (gamePage.resPool.resourceMap.manpower.value >= 100) {
+		// TODO: Dragons
+		var zebras = gamePage.diplomacy.get('zebras')
+		if (zebras != undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
+			k.log(1, "trading with zebras");
+			gamePage.diplomacy.tradeAll(zebras);
+		} else if (gamePage.resPool.resourceMap.manpower.value >= 100) {
 			k.log(1, "hunting");
 			gamePage.huntAll({ preventDefault: function(){}})
 		}
 	}
-	
-	// religion
-	// TODO: claim religious upgrades
-	// TODO: unicorn sacrifice
-	if (k.isFull("faith")) {
-		k.log(1, "Praise the sun!");
-		gamePage.religionTab.praiseBtn.onClick();
-	}
-	
-    // **********************************************************
-    // 2. CRAFTING
-    // **********************************************************
-	if (k.isFull("wood")) {
-		k.log(1, "crafting beams");
-		gamePage.craft("beam", 1 * k.craftRatio);
-	}
 
-	if (k.isFull("catnip")) {
-		k.log(1, "crafting wood");
-		gamePage.craft("wood", 10 * k.craftRatio);
-	}
-
-	if (k.isFull("wood")) {
-		k.log(1, "crafting beams");
-		gamePage.craft("beam", 1 * k.craftRatio);
-	}
+    // **********************************************************
+    // CRAFTING RESOURCES AT CAPACITY
+    // **********************************************************
+	// TODO: move stuff into k.craftorder
+	k.craftorder.forEach(function(r) {
+		if (k.isFull(r.raw)) {
+			k.log(1, "crafting " + r.refined);
+			gamePage.craft(r.refined, r.val * k.craftRatio);
+		}
+	});
 
 	if (k.needs.scaffold > 0 &&
 		gamePage.resPool.resourceMap.beam.value > 0.5 * gamePage.resPool.resourceMap.wood.maxValue) {
@@ -347,11 +358,6 @@ var goi = setInterval(function() {
 			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / 50;
 			gamePage.craft("scaffold", n)
 		}
-	}
-
-	if (k.isFull("minerals")) {
-		k.log(1, "crafting slabs");
-		gamePage.craft("slab", 1 * k.craftRatio);
 	}
 
 	if (!gamePage.resPool.resourceMap.coal.unlocked) {
@@ -380,13 +386,13 @@ var goi = setInterval(function() {
 
     // TODO: BLOCKER: currently only make parchments for manuscripts.  Early game we need parchment for amphitheaters (for first culture)
     // Amphitheatre isn't on the buildorder list, may need to add
-    if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > 525) {
+	var fursPerParchment = 175;
+    if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > fursPerParchment) {
         k.log(1, "crafting parchment");
         gamePage.craftAll("parchment");
     }
 
 	if (k.isFull("culture")) {
-		var fursPerParchment = 175;
 		var parchmentsPerManuscript = 25;
 		
 		if (gamePage.resPool.resourceMap.furs.value >= parchmentsPerManuscript * fursPerParchment) {
@@ -412,12 +418,6 @@ var goi = setInterval(function() {
 			k.log(1, "crafting blueprint");
 			gamePage.craft('blueprint', 1);
 		}
-	}
-
-	if (k.isFull("titanium") &&
-	    $('#k-alloy-toggle').prop('checked')) {
-		k.log(1, "crafting alloy");
-		gamePage.craft("alloy", 1);
 	}
 	
     // **********************************************************
@@ -491,7 +491,6 @@ k.panel = $("<div id='kcode'><div id='mode' /><div id='k-options'>" +
 				"<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' checked /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
 				"<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' checked /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
 				"<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' checked /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
-				"<input id='k-alloy-toggle' name='k-alloy-toggle' type='checkbox' checked /><label for='k-alloy-toggle'>make alloy</label>" +
 				"</div><div id='k-msg' /><div id='k-bld' /></div>");
 k.panel.append("<style>#kcode { margin-left: 4px; }" +
 				"#kcode #mode::before { color: #808080; content: 'mode: ';}" +
