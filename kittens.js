@@ -1,7 +1,7 @@
 // TODO:
 // make megalith/ziggurat
 // explore for trade
-
+// oil wells, steamworks, calciners, magnetos (oil and energy restrictions)
 var k = {
 	mode: "on",
 	logLevel: 2,
@@ -16,7 +16,8 @@ var k = {
 		{ label: "Lumber Mill", name: "lumberMill" }, 
 	    { label: "Aqueduct", name: "aqueduct" },
 		{ label: "Mine", name: "mine" },
-        { label: "Quarry", name: "quarry" },
+		{ label: "Quarry", name: "quarry" },
+		{ label: "Oil Well", name: 'oilWell' },
 		{ label: "Academy", name: "academy" },
 		{ label: "Library", name: "library" },
 		{ label: "Temple", name: "temple" },
@@ -153,7 +154,7 @@ var goi = setInterval(function() {
                 gamePage.resPool.resourceMap[h[1].name].value * 0.1 > h[1].val &&
                 gamePage.resPool.resourceMap[h[2].name].value * 0.1 > h[2].val) {
                 k.build('Harbour');
-            }
+			}
         }
 	}
 
@@ -349,7 +350,7 @@ var goi = setInterval(function() {
 	});
 
 	if (k.needs.scaffold > 0 &&
-		gamePage.resPool.resourceMap.beam.value > 0.5 * gamePage.resPool.resourceMap.wood.maxValue) {
+		gamePage.resPool.resourceMap.beam.value > 0.25 * gamePage.resPool.resourceMap.wood.maxValue) {
 		k.log(1, "crafting scaffold");
 
 		if ((k.needs.scaffold * 50 / gamePage.resPool.resourceMap.beam.value) < 0.05) {
@@ -378,7 +379,7 @@ var goi = setInterval(function() {
     }
     
     if (k.needs.gear > 0 &&
-        gamePage.resPool.resourceMap.steel.value >= 0.5 * gamePage.resPool.resourceMap.iron.maxValue)
+        gamePage.resPool.resourceMap.steel.value >= 0.25 * gamePage.resPool.resourceMap.iron.maxValue)
     {
         k.log(1, 'crafting gear');
         gamePage.craft('gear', 1 * k.craftRatio);
