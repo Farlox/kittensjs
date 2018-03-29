@@ -317,7 +317,7 @@ var goi = setInterval(function() {
         if (up.gap.length > 0) {
             up.gap.forEach(function(gap) {
                 if (!gap.affordable) {
-                    if (k.needs[gap.name] == undefined) k.needs[gap.name] = 0;
+                    if (k.needs[gap.name] === undefined) k.needs[gap.name] = 0;
                     k.needs[gap.name] += gap.gap;
                 }
             });
@@ -328,13 +328,13 @@ var goi = setInterval(function() {
 	if (k.isFull("manpower")) {
 		// TODO: explore for trading partners
 		// TODO: Dragons
-		var zebras = gamePage.diplomacy.get('zebras')
-		if (zebras != undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
+		var zebras = gamePage.diplomacy.get('zebras');
+		if (zebras !== undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
 			k.log(1, "trading with zebras");
 			gamePage.diplomacy.tradeAll(zebras);
 		} else if (gamePage.resPool.resourceMap.manpower.value >= 100) {
 			k.log(1, "hunting");
-			gamePage.huntAll({ preventDefault: function(){}})
+			gamePage.huntAll({ preventDefault: function() {} });
 		}
 	}
 
@@ -357,7 +357,7 @@ var goi = setInterval(function() {
 			gamePage.craft("scaffold", k.needs.scaffold);
 		} else {
 			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / 50;
-			gamePage.craft("scaffold", n)
+			gamePage.craft("scaffold", n);
 		}
 	}
 
@@ -370,7 +370,7 @@ var goi = setInterval(function() {
 		if (k.isFull("coal") || k.isFull("iron")) {
 			if (gamePage.resPool.resourceMap.coal.value > 100) {
 				k.log(1, "crafting steel");
-				gamePage.craftAll("steel")
+				gamePage.craftAll("steel");
 			} else {
 				k.log(1, "crafting plates");
 				gamePage.craft("plate", 1 * k.craftRatio);
@@ -429,7 +429,6 @@ var goi = setInterval(function() {
     var woodcutter = gamePage.village.getJob("woodcutter");
     var miner = gamePage.village.getJob("miner");
     var scholar = gamePage.village.getJob("scholar");
-    var jobTot = woodcutter.value + miner.value + scholar.value;
 
     k.needs.tot = 0;
     if (k.needs.wood) k.needs.tot += k.needs.wood;
