@@ -1,13 +1,19 @@
 // TODO:
 // make megalith/ziggurat
 // explore for trade
-// oil wells, steamworks, calciners, magnetos (oil and energy restrictions)
+// steamworks, magnetos (oil and energy restrictions)
 var k = {
 	mode: "on",
 	logLevel: 2,
-	craftRatio: 5.0,
+	craftRatio: 1.0,
 	msg: '',
 	needs: [],
+	const: {
+		woodPerBeam: 175,
+		beamPerScaffold: 50,
+		woodPerScaffold: 50 * 175,
+		mineralsPerSlab: 250
+	},
 	buildorder:
 	[
 		{ label: "Unic. Pasture", name: "" }, 
@@ -17,12 +23,13 @@ var k = {
 	    { label: "Aqueduct", name: "aqueduct" },
 		{ label: "Mine", name: "mine" },
 		{ label: "Quarry", name: "quarry" },
-		{ label: "Oil Well", name: 'oilWell' },
+		{ label: "Oil Well", name: 'oilWell', prereq: function() { return gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
 		{ label: "Academy", name: "academy" },
 		{ label: "Library", name: "library" },
 		{ label: "Temple", name: "temple" },
 		{ label: "Observatory", name: "observatory" },
 		{ label: "Smelter", name: "smelter" },
+		{ label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick('oil', true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
 		{ label: "Barn", name: "barn" },
 		{ label: "Workshop", name: "workshop" },
 		{ label: "Tradepost", name: "tradepost" },
@@ -58,6 +65,13 @@ var k = {
 			}
 		});
 		return cap;
+	},
+	click: function(tab, button) {
+		k.pushTab(tab);
+		k.log(2, tab + ": " + button.model.metadata.name);
+		k.msg += tab + ": " + button.model.metadata.label + "<br/>";
+		button.buttonContent.click();
+		k.popTab();
 	},
 	build: function(bldLabel) {
 		var bld = $(".btnContent:contains(" + bldLabel + ")");
@@ -100,6 +114,8 @@ var goi = setInterval(function() {
 		$(k.panel).find('#k-msg').html('');
 
 		k.build('Catnip field');
+		k.build('Catnip field');
+		k.build('Catnip field');
 		return;
 	}
 
@@ -133,7 +149,9 @@ var goi = setInterval(function() {
     if (k.mode != "nobuild") {	
 		if ($("a.tab.activeTab")[0].innerText == "Bonfire") {
 			k.buildorder.forEach(function(bldId) {
-				k.build(bldId.label);
+				if (bldId.prereq === undefined || bldId.prereq()) {
+					k.build(bldId.label);
+				}
             });
             
             var m = gamePage.bld.getPrices('mansion');
@@ -163,12 +181,9 @@ var goi = setInterval(function() {
 		gamePage.workshopTab.buttons.forEach(function(btn) {
 			if (btn.model.metadata.unlocked &&
 				!btn.model.metadata.researched &&
-				k.canAfford(btn.model.prices)) {
-					k.pushTab('Workshop');
-					k.log(2, 'upgrading ' + btn.model.name);
-					k.msg += "upgraded " + btn.model.name + "<br/>";
-					btn.buttonContent.click();
-					k.popTab();
+				k.canAfford(btn.model.prices))
+				{
+					k.click('Workshop', btn);
 				}
 		});
 	}
@@ -178,12 +193,9 @@ var goi = setInterval(function() {
 		gamePage.libraryTab.buttons.forEach(function(btn) {
 			if (btn.model.metadata.unlocked && 
 				!btn.model.metadata.researched &&
-				k.canAfford(btn.model.prices)) {
-				k.pushTab('Science');
-				k.log(2, "researching " + btn.model.name);
-				k.msg += "researched " + btn.model.name + "<br/>";
-				btn.buttonContent.click();
-				k.popTab();
+				k.canAfford(btn.model.prices))
+			{
+				k.click('Science', btn);
 			}
 		});
 	}
@@ -196,11 +208,7 @@ var goi = setInterval(function() {
 				btn.model.on == 0 &&
 				k.canAfford(btn.model.prices))
 			{
-				k.pushTab('Religion');
-				k.log(2, "praying for " + btn.model.name);
-				k.msg += "prayed for " + btn.model.name + "<br/>";
-				btn.buttonContent.click();
-				k.popTab();
+				k.click('Religion', btn);
 			}
 		});
 	}
@@ -329,7 +337,7 @@ var goi = setInterval(function() {
 		// TODO: explore for trading partners
 		// TODO: Dragons
 		var zebras = gamePage.diplomacy.get('zebras');
-		if (zebras !== undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 15) {
+		if (zebras !== undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 0.75 * gamePage.resPool.resourceMap.gold.maxValue) {
 			k.log(1, "trading with zebras");
 			gamePage.diplomacy.tradeAll(zebras);
 		} else if (gamePage.resPool.resourceMap.manpower.value >= 100) {
@@ -342,10 +350,10 @@ var goi = setInterval(function() {
     // CRAFTING RESOURCES AT CAPACITY
     // **********************************************************
 	// TODO: move stuff into k.craftorder
-	k.craftorder.forEach(function(r) {
-		if (k.isFull(r.raw)) {
-			k.log(1, "crafting " + r.refined);
-			gamePage.craft(r.refined, r.val * k.craftRatio);
+	k.craftorder.forEach(function(craft) {
+		if (k.isFull(craft.raw)) {
+			k.log(1, "crafting " + craft.refined);
+			gamePage.craft(craft.refined, craft.val * k.craftRatio);
 		}
 	});
 
@@ -353,10 +361,10 @@ var goi = setInterval(function() {
 		gamePage.resPool.resourceMap.beam.value > 0.25 * gamePage.resPool.resourceMap.wood.maxValue) {
 		k.log(1, "crafting scaffold");
 
-		if ((k.needs.scaffold * 50 / gamePage.resPool.resourceMap.beam.value) < 0.05) {
+		if ((k.needs.scaffold * k.const.beamPerScaffold / gamePage.resPool.resourceMap.beam.value) < 0.05) {
 			gamePage.craft("scaffold", k.needs.scaffold);
 		} else {
-			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / 50;
+			var n = (gamePage.resPool.resourceMap.beam.value * 0.05) / k.const.beamPerScaffold;
 			gamePage.craft("scaffold", n);
 		}
 	}
@@ -430,9 +438,24 @@ var goi = setInterval(function() {
     var miner = gamePage.village.getJob("miner");
     var scholar = gamePage.village.getJob("scholar");
 
+	if (k.needs.slab) {
+		if (!k.needs.minerals) k.needs.minerals = 0;
+		k.needs.minerals += k.needs.slab * k.const.mineralsPerSlab;
+	}
+
+	if (k.needs.beam) {
+		if (!k.needs.wood) k.needs.wood = 0;
+		k.needs.wood += k.needs.beam * k.const.woodPerBeam;
+	}
+
+	if (k.needs.scaffold) {
+		if (!k.needs.wood) k.needs.wood = 0;
+		k.needs.wood += k.needs.scaffold * k.const.woodPerScaffold;
+	}
+
     k.needs.tot = 0;
     if (k.needs.wood) k.needs.tot += k.needs.wood;
-    if (k.needs.minerals) k.needs.tot += k.needs.minerals;
+	if (k.needs.minerals) k.needs.tot += k.needs.minerals;
     if (k.needs.science) k.needs.tot += k.needs.science;
     
     var foodProd = gamePage.getResourcePerTick('catnip', true);
@@ -444,11 +467,15 @@ var goi = setInterval(function() {
 
     var minWorking = 0.1 * gamePage.village.sim.getKittens();
 
-    var foodLow = farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
-    var woodLow = k.needs.wood / k.needs.tot > woodProd / productionTotal;
-    var mineralsLow = k.needs.minerals / k.needs.tot > mineralsProd / productionTotal;
-    var scienceLow = k.needs.science / k.needs.tot > scienceProd / productionTotal;
-    
+    var foodLow = farmer.unlocked && farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
+    var woodLow = woodcutter.unlocked && k.needs.wood / k.needs.tot > woodProd / productionTotal;
+    var mineralsLow = miner.unlocked && k.needs.minerals / k.needs.tot > mineralsProd / productionTotal;
+    var scienceLow = scholar.unlocked && k.needs.science / k.needs.tot > scienceProd / productionTotal;
+	
+	$('#k-wood').css('width', ((k.needs.wood / k.needs.tot) * 100) + "%" );
+	$('#k-minerals').css('width', ((k.needs.minerals / k.needs.tot) * 100) + "%" );
+	$('#k-science').css('width', ((k.needs.science / k.needs.tot) * 100) + "%" );
+	
     if (foodLow || woodLow || mineralsLow || scienceLow) {
         // remove if production surplus
         if (woodcutter.value > minWorking &&
@@ -469,15 +496,10 @@ var goi = setInterval(function() {
 
         // fill up where needed
         while (gamePage.village.getFreeKittens() > 0) {
-            if (foodLow) {
-                k.assign(farmer);
-            } else if (woodLow) {
-                k.assign(woodcutter);
-            } else if (mineralsLow) {
-                k.assign(miner);
-            } else if (scienceLow) {
-                k.assign(scholar);
-            }
+            if (foodLow) k.assign(farmer);
+            else if (woodLow) k.assign(woodcutter);
+            else if (mineralsLow) k.assign(miner);
+            else if (scienceLow) k.assign(scholar);
         }
     }
 	
@@ -488,14 +510,17 @@ var goi = setInterval(function() {
 
 $("#kcode").remove();
 k.panel = $("<div id='kcode'><div id='mode' /><div id='k-options'>" +
-				"<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' checked /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
-				"<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' checked /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
-				"<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' checked /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
-				"</div><div id='k-msg' /><div id='k-bld' /></div>");
+				"<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
+				"<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
+				"<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
+				"</div><div id='k-msg' /><div id='k-bld' />" +
+				"<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-science' class='bar'>science</div></div>" +
+				"</div>");
 k.panel.append("<style>#kcode { margin-left: 4px; }" +
 				"#kcode #mode::before { color: #808080; content: 'mode: ';}" +
 				"#kcode #k-msg { margin-top: 5px; }" +
 				"#kcode #k-options { margin-top: 5px; }" +
 				"#kcode #k-bld { margin-top: 5px; color: #808080; }" +
+				"#kcode #k-needs .bar { background-color:#ccc; color:#333 }" +
 				"</style>");
 $("#leftColumn").append(k.panel);
