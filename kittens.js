@@ -1,18 +1,23 @@
 // TODO:
 // make megalith/ziggurat
 // explore for trade
+// trade ship
 // steamworks, magnetos (oil and energy restrictions)
+// other jobs: hunter, priest
 var k = {
     mode: "on",
     logLevel: 2,
     craftRatio: 1.0,
-    msg: '',
+    msg: "",
     needs: [],
     const: {
         woodPerBeam: 175,
         beamPerScaffold: 50,
         woodPerScaffold: 50 * 175,
-        mineralsPerSlab: 250
+        mineralsPerSlab: 250,
+        steelPerGear: 15,
+        fursPerParchment: 175,
+        parchmentsPerManuscript: 25,
     },
     buildorder:
     [
@@ -23,13 +28,13 @@ var k = {
         { label: "Aqueduct", name: "aqueduct" },
         { label: "Mine", name: "mine" },
         { label: "Quarry", name: "quarry" },
-        { label: "Oil Well", name: 'oilWell', prereq: function() { return gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
+        { label: "Oil Well", name: "oilWell", prereq: function() { return gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
         { label: "Academy", name: "academy" },
         { label: "Library", name: "library" },
         { label: "Temple", name: "temple" },
         { label: "Observatory", name: "observatory" },
         { label: "Smelter", name: "smelter", prereq: function() { return k.needs.iron > 0; } },
-        { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick('oil', true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
+        { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
         { label: "Barn", name: "barn" },
         { label: "Workshop", name: "workshop" },
         { label: "Tradepost", name: "tradepost" },
@@ -82,8 +87,16 @@ var k = {
         }
     },
     assign: function(job) {
-        k.log(1, 'assigning ' + job.name);
-        gamePage.village.assignJob(job);
+        if (job.unlocked) {
+            k.log(1, "assigning " + job.name);
+            gamePage.village.assignJob(job);
+        }
+    },
+    unassign: function(job) {
+        if (job.unlocked) {
+            k.log(1, "unassigning " + job.name);
+            gamePage.village.sim.removeJob(job.name);
+        }
     },
     pushTab: function(tab) {
         k.prevTab = $("a.tab.activeTab")[0].innerText;
@@ -299,6 +312,8 @@ var goi = setInterval(function() {
             k.upgrades.push(up);        }
     });
     
+    // TODO: add religious upgrades needs
+
     // calculate aggregate needs
     k.needs = [];
     k.buildorder.forEach(function(b) { 
@@ -329,7 +344,8 @@ var goi = setInterval(function() {
             });
         }
     });
-
+    // TODO: aggregate religous upgrades needs
+    
     // hunt and trade
     if (k.isFull("manpower")) {
         // TODO: explore for trading partners
@@ -391,23 +407,18 @@ var goi = setInterval(function() {
         gamePage.craft('gear', 1 * k.craftRatio);
     }
 
-    // TODO: BLOCKER: currently only make parchments for manuscripts.  Early game we need parchment for amphitheaters (for first culture)
-    // Amphitheatre isn't on the buildorder list, may need to add
-    var fursPerParchment = 175;
-    if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > fursPerParchment) {
+    if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > k.const.fursPerParchment) {
         k.log(1, "crafting parchment");
         gamePage.craftAll("parchment");
     }
 
     if (k.isFull("culture")) {
-        var parchmentsPerManuscript = 25;
-        
-        if (gamePage.resPool.resourceMap.furs.value >= parchmentsPerManuscript * fursPerParchment) {
+        if (gamePage.resPool.resourceMap.furs.value >= k.const.parchmentsPerManuscript * k.const.fursPerParchment) {
             k.log(1, "crafting parchment");
-            gamePage.craft("parchment", parchmentsPerManuscript);
+            gamePage.craft("parchment", k.const.parchmentsPerManuscript);
         }
         if ($('#k-manuscript-toggle').prop('checked') && 
-            gamePage.resPool.resourceMap.parchment.value >= parchmentsPerManuscript) {
+            gamePage.resPool.resourceMap.parchment.value >= k.const.parchmentsPerManuscript) {
             k.log(1, "crafting manuscript");
             gamePage.craft("manuscript", 1);
         }
@@ -436,6 +447,7 @@ var goi = setInterval(function() {
     var miner = gamePage.village.getJob("miner");
     var scholar = gamePage.village.getJob("scholar");
 
+    // calculate raw needs based on refined needs
     if (k.needs.slab) {
         if (!k.needs.minerals) k.needs.minerals = 0;
         k.needs.minerals += k.needs.slab * k.const.mineralsPerSlab;
@@ -455,52 +467,60 @@ var goi = setInterval(function() {
     if (k.needs.wood) k.needs.tot += k.needs.wood;
     if (k.needs.minerals) k.needs.tot += k.needs.minerals;
     if (k.needs.science) k.needs.tot += k.needs.science;
-    
+
     var foodProd = gamePage.getResourcePerTick('catnip', true);
     var woodProd = gamePage.getResourcePerTick('wood', true);
     var mineralsProd = gamePage.getResourcePerTick('minerals', true);
     var scienceProd = gamePage.getResourcePerTick('science', true);
-
     var productionTotal =  woodProd + mineralsProd + scienceProd;
 
-    var minWorking = 0.1 * gamePage.village.sim.getKittens();
+    var isFoodProdLow = farmer.unlocked && farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
 
-    var foodLow = farmer.unlocked && farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
-    var woodLow = woodcutter.unlocked && k.needs.wood / k.needs.tot > woodProd / productionTotal;
-    var mineralsLow = miner.unlocked && k.needs.minerals / k.needs.tot > mineralsProd / productionTotal;
-    var scienceLow = scholar.unlocked && k.needs.science / k.needs.tot > scienceProd / productionTotal;
-    
-    $('#k-wood').css('width', ((k.needs.wood / k.needs.tot) * 100) + "%" );
-    $('#k-minerals').css('width', ((k.needs.minerals / k.needs.tot) * 100) + "%" );
-    $('#k-science').css('width', ((k.needs.science / k.needs.tot) * 100) + "%" );
-    
-    if (foodLow || woodLow || mineralsLow || scienceLow) {
-        // remove if production surplus
-        if (woodcutter.value > minWorking &&
-            (!k.needs.wood || !woodLow))
-        {
-            this.game.village.sim.removeJob(woodcutter.name);
-        }
-        if (miner.value > minWorking &&
-            (!k.needs.minerals || !mineralsLow))
-        {
-            this.game.village.sim.removeJob(miner.name);
-        }
-        if (scholar.value > minWorking &&
-            (!k.needs.science || !scienceLow))
-        {
-            this.game.village.sim.removeJob(scholar.name);
-        }
+    var woodNeedRatio = k.needs.wood / k.needs.tot;
+    var mineralsNeedRatio = k.needs.minerals / k.needs.tot;
+    var scienceNeedRatio = k.needs.science / k.needs.tot;
 
-        // fill up where needed
-        while (gamePage.village.getFreeKittens() > 0) {
-            if (foodLow) k.assign(farmer);
-            else if (woodLow) k.assign(woodcutter);
-            else if (mineralsLow) k.assign(miner);
-            else if (scienceLow) k.assign(scholar);
-        }
+    $('#k-wood').css('width', (isNaN(woodNeedRatio) ? 0 : woodNeedRatio * 100) + "%" );
+    $('#k-minerals').css('width', (isNaN(mineralsNeedRatio) ? 0 : mineralsNeedRatio * 100) + "%" );
+    $('#k-science').css('width', (isNaN(scienceNeedRatio) ? 0 : scienceNeedRatio * 100) + "%" );
+
+    var data = [];
+    if (woodcutter.unlocked) {
+        data.push({
+            job: woodcutter, 
+            prodRatio: woodProd / productionTotal,
+            needRatio: woodNeedRatio
+        });
     }
-    
+    if (miner.unlocked) {
+        data.push({
+            job: miner, 
+            prodRatio: mineralsProd / productionTotal,
+            needRatio: mineralsNeedRatio
+        });
+    }
+    if (scholar.unlocked) {
+        data.push({
+            job: scholar, 
+            prodRatio: scienceProd / productionTotal,
+            needRatio: scienceNeedRatio
+        });
+    }
+
+    if (data.length > 1) {
+        data.forEach(function(d) {
+            d.delta = d.prodRatio - (isNaN(d.needRatio) ? 0 : d.needRatio);
+        });
+
+        data.sort(function(a,b) { return a.delta < b.delta });
+
+        // assignment
+        if (gamePage.village.getFreeKittens() == 0) k.unassign(data[0].job);
+        if (isFoodProdLow) k.assign(farmer)
+        else k.assign(data[data.length - 1].job);
+    }
+
+    // UI
     $(k.panel).find("#k-msg").html(k.msg);
     $(k.panel).find("#k-bld").html(bldStr);
 }, 10000);
