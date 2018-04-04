@@ -18,6 +18,7 @@ var k = {
         steelPerGear: 15,
         fursPerParchment: 175,
         parchmentsPerManuscript: 25,
+        sciencePerCompendium: 10000
     },
     buildorder:
     [
@@ -461,6 +462,11 @@ var goi = setInterval(function() {
     if (k.needs.scaffold) {
         if (!k.needs.wood) k.needs.wood = 0;
         k.needs.wood += k.needs.scaffold * k.const.woodPerScaffold;
+    }
+
+    if (k.needs.compedium) {
+        if (!k.needs.science) k.needs.science = 0;
+        k.needs.science += k.needs.compedium * k.const.sciencePerCompendium;
     }
 
     k.needs.tot = 0;
