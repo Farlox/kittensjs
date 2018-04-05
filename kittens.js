@@ -25,11 +25,12 @@ var k = {
         { label: "Unic. Pasture", name: "" }, 
         { label: "Hut", name: "hut" },
         { label: "Log House", name: "logHouse" },
+        { label: "Mansion", name: "mansion" },
         { label: "Lumber Mill", name: "lumberMill" }, 
         { label: "Aqueduct", name: "aqueduct" },
         { label: "Mine", name: "mine" },
         { label: "Quarry", name: "quarry" },
-        { label: "Oil Well", name: "oilWell", prereq: function() { return gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
+        { label: "Oil Well", name: "oilWell", prereq: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
         { label: "Academy", name: "academy" },
         { label: "Library", name: "library" },
         { label: "Temple", name: "temple" },
@@ -38,6 +39,7 @@ var k = {
         { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
         { label: "Barn", name: "barn" },
         { label: "Workshop", name: "workshop" },
+        { label: "Steamworks", name: "steamworks", prereq: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; } },
         { label: "Tradepost", name: "tradepost" },
         { label: "Amphitheatre", name: "amphitheatre" },
         { label: "Aqueduct", name: "aqueduct" },
@@ -168,12 +170,13 @@ var goi = setInterval(function() {
                 }
             });
             
+            /*
             var m = gamePage.bld.getPrices('mansion');
             if (m[0].val < gamePage.resPool.resourceMap.slab.value * 0.1 &&
                 m[2].val < gamePage.resPool.resourceMap.titanium.maxValue * 0.1)
             {
                 k.build('Mansion');
-            }
+            }*/
 
             var w = gamePage.bld.getPrices('warehouse');
             if (gamePage.resPool.resourceMap[w[0].name].value * 0.1 > w[0].val &&
@@ -215,7 +218,6 @@ var goi = setInterval(function() {
     }
 
     // religion
-    // TODO: unicorn sacrifice
     if (gamePage.religionTab.visible) {
         gamePage.religionTab.rUpgradeButtons.forEach(function(btn) {
             if (btn.model.visible &&
@@ -230,6 +232,27 @@ var goi = setInterval(function() {
     if (k.isFull("faith")) {
         k.log(1, "Praise the sun!");
         gamePage.religionTab.praiseBtn.onClick();
+    }
+
+    if (gamePage.religionTab.sacrificeBtn.model.enabled) {
+        k.log(1, "Sacrificing Unicorns");
+        gamePage.religionTab.sacrificeBtn.onClick();
+    }
+
+    // make a ziggurat
+    var zigBld = gamePage.bld.get('ziggurat');
+    if (zigBld.unlocked && zigBld.val < 1) {
+        if (k.canAfford(gamePage.bld.getPrices(zigBld.name))) {
+            k.build(zigBld.label);
+        } else {
+            var megalith = gamePage.workshop.getCraft('megalith');
+            if (megalith.unlocked && 
+                gamePage.resPool.resourceMap.megalith.value < 50 && 
+                k.canAfford(megalith.prices)) {
+            
+                gamePage.craft(megalith.name, 1);
+            }
+        }
     }
 
     // **********************************************************
@@ -352,7 +375,9 @@ var goi = setInterval(function() {
         // TODO: explore for trading partners
         // TODO: Dragons
         var zebras = gamePage.diplomacy.get('zebras');
-        if (zebras !== undefined && zebras.unlocked && gamePage.resPool.resourceMap.gold.value >= 0.75 * gamePage.resPool.resourceMap.gold.maxValue) {
+        if (zebras !== undefined && zebras.unlocked && 
+            gamePage.resPool.resourceMap.gold.value >= 0.75 * gamePage.resPool.resourceMap.gold.maxValue &&
+            gamePage.resPool.resourceMap.slab.value >= 50) {
             k.log(1, "trading with zebras");
             gamePage.diplomacy.tradeAll(zebras);
         } else if (gamePage.resPool.resourceMap.manpower.value >= 100) {
