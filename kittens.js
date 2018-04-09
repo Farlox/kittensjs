@@ -27,16 +27,20 @@ var k = {
         { label: "Log House", name: "logHouse" },
         { label: "Mansion", name: "mansion" },
         { label: "Lumber Mill", name: "lumberMill" }, 
-        { label: "Aqueduct", name: "aqueduct" },
         { label: "Mine", name: "mine" },
+        { label: "Aqueduct", name: "aqueduct" },
+        { label: "Catnip field", name: 'field', prereq: function() { return gamePage.calendar.season < 2; } },
+        { label: "Pasture", name: 'pasture', prereq: function() { return gamePage.calendar.season < 2; } },
         { label: "Quarry", name: "quarry" },
         { label: "Oil Well", name: "oilWell", prereq: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
         { label: "Academy", name: "academy" },
         { label: "Library", name: "library" },
-        { label: "Temple", name: "temple" },
         { label: "Observatory", name: "observatory" },
+        { label: "Temple", name: "temple" },
+        { label: "Chapel", name: "chapel" },
         { label: "Smelter", name: "smelter", prereq: function() { return k.needs.iron > 0; } },
         { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
+        { label: "Magneto", name: "magneto", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 } },
         { label: "Barn", name: "barn" },
         { label: "Workshop", name: "workshop" },
         { label: "Steamworks", name: "steamworks", prereq: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; } },
@@ -87,6 +91,10 @@ var k = {
             k.log(2, "building " + bldLabel);
             k.msg += "built " + bldLabel + "<br/>";
             bld.click();
+        } else if (bld.length == 2 && !bld[1].parent().hasClass("disabled")) {
+            k.log(2, "building " + bldLabel);
+            k.msg += "built " + bldLabel + "<br/>";
+            bld[1].click();
         }
     },
     assign: function(job) {
