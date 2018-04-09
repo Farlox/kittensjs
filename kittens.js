@@ -17,6 +17,7 @@ var k = {
         woodPerScaffold: 50 * 175,
         mineralsPerSlab: 250,
         steelPerGear: 15,
+        titaniumPerAlloy: 10,
         fursPerParchment: 175,
         parchmentsPerManuscript: 25,
         sciencePerCompendium: 10000
@@ -406,7 +407,8 @@ var goi = setInterval(function() {
             k.log(1, "crafting " + craft.refined);
 
             // amount acquired in 20 seconds
-            var rawAmount = 20 * k.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
+            var seconds = 20;
+            var rawAmount = seconds * k.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
             var refinedAmount = rawAmount / craft.ratio;
             gamePage.craft(craft.refined, refinedAmount);
         }
@@ -442,10 +444,20 @@ var goi = setInterval(function() {
     }
     
     if (k.needs.gear > 0 &&
-        gamePage.resPool.resourceMap.steel.value >= 0.25 * gamePage.resPool.resourceMap.iron.maxValue)
+        gamePage.resPool.resourceMap.gear.value < 0.1 * gamePage.resPool.resourceMap.steel.value)
     {
         k.log(1, 'crafting gear');
-        gamePage.craft('gear', 1 * k.craftRatio);
+        var gap = 0.1 * gamePage.resPool.resourceMap.steel.value - gamePage.resPool.resourceMap.gear.value
+        gamePage.craft('gear', gap / k.const.steelPerGear );
+    }
+
+    if (k.needs.alloy > 0 &&
+        gamePage.workshop.getCraft('alloy').unlocked &&
+        gamePage.resPool.resourceMap.alloy.value < 0.1 * gamePage.resPool.resourceMap.titanium.value)
+    {
+        k.log(1, 'crafting alloy');
+        var gap = 0.1 * gamePage.resPool.resourceMap.titanium.value - gamePage.resPool.resourceMap.alloy.value
+        gamePage.craft('alloy', gap / k.const.titaniumPerAlloy );
     }
 
     if (k.needs.parchment > 0 && gamePage.resPool.resourceMap.furs.value > k.const.fursPerParchment) {
