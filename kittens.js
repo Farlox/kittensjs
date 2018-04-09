@@ -50,11 +50,11 @@ var k = {
     ],
     craftorder:
     [
-        { raw: "wood", refined: "beam", val: 1 },
-        { raw: "catnip", refined: "wood", val: 10},
-        { raw: "wood", refined: "beam", val: 1 },
-        { raw: "minerals", refined: "slab", val: 1},
-        { raw: "titanium", refined: "alloy", val: 1}
+        { raw: "wood", refined: "beam", ratio: 175 },
+        { raw: "catnip", refined: "wood", ratio: 100 },
+        { raw: "wood", refined: "beam", ratio: 175 },
+        { raw: "minerals", refined: "slab", ratio: 250 },
+        { raw: "titanium", refined: "alloy", ratio: 10 }
     ],
     isFull: function(resName) {
         return (gamePage.resPool.resourceMap[resName].value / gamePage.resPool.resourceMap[resName].maxValue) >= 0.95
@@ -91,7 +91,7 @@ var k = {
             k.log(2, "building " + bldLabel);
             k.msg += "built " + bldLabel + "<br/>";
             bld.click();
-        } else if (bld.length == 2 && !bld[1].parent().hasClass("disabled")) {
+        } else if (bld.length == 2 && !$(bld[1]).parent().hasClass('disabled')) {
             k.log(2, "building " + bldLabel);
             k.msg += "built " + bldLabel + "<br/>";
             bld[1].click();
@@ -385,6 +385,7 @@ var goi = setInterval(function() {
         // TODO: Dragons
         var zebras = gamePage.diplomacy.get('zebras');
         if (zebras !== undefined && zebras.unlocked && 
+            !k.isFull('titanium') &&
             gamePage.resPool.resourceMap.gold.value >= 0.75 * gamePage.resPool.resourceMap.gold.maxValue &&
             gamePage.resPool.resourceMap.slab.value >= 50) {
             k.log(1, "trading with zebras");
@@ -402,7 +403,10 @@ var goi = setInterval(function() {
     k.craftorder.forEach(function(craft) {
         if (k.isFull(craft.raw)) {
             k.log(1, "crafting " + craft.refined);
-            gamePage.craft(craft.refined, craft.val * k.craftRatio);
+
+            var rawAmount = 20 * 5 * gamePage.getResourcePerTick(craft.raw, true);
+            var refinedAmount = rawAmount / craft.ratio;
+            gamePage.craft(craft.refined, refinedAmount);
         }
     });
 
@@ -483,30 +487,18 @@ var goi = setInterval(function() {
     var scholar = gamePage.village.getJob("scholar");
 
     // calculate raw needs based on refined needs
-    if (k.needs.slab) {
-        if (!k.needs.minerals) k.needs.minerals = 0;
-        k.needs.minerals += k.needs.slab * k.const.mineralsPerSlab;
-    }
+    k.needs.totWood = 0;
+    if (k.needs.wood) k.needs.totWood += k.needs.wood;
+    if (k.needs.beam) k.needs.totWood += k.needs.beam * k.const.woodPerBeam;
+    if (k.needs.scaffold) k.needs.totWood += k.needs.scaffold * k.const.woodPerScaffold;
 
-    if (k.needs.beam) {
-        if (!k.needs.wood) k.needs.wood = 0;
-        k.needs.wood += k.needs.beam * k.const.woodPerBeam;
-    }
+    k.needs.totMinerals = 0;
+    if (k.needs.slab) k.needs.totMinerals += k.needs.slab * k.const.mineralsPerSlab;
 
-    if (k.needs.scaffold) {
-        if (!k.needs.wood) k.needs.wood = 0;
-        k.needs.wood += k.needs.scaffold * k.const.woodPerScaffold;
-    }
+    k.needs.totScience = 0;
+    if (k.needs.compedium) k.needs.science += k.needs.compedium * k.const.sciencePerCompendium;
 
-    if (k.needs.compedium) {
-        if (!k.needs.science) k.needs.science = 0;
-        k.needs.science += k.needs.compedium * k.const.sciencePerCompendium;
-    }
-
-    k.needs.tot = 0;
-    if (k.needs.wood) k.needs.tot += k.needs.wood;
-    if (k.needs.minerals) k.needs.tot += k.needs.minerals;
-    if (k.needs.science) k.needs.tot += k.needs.science;
+    k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience;
 
     var foodProd = gamePage.getResourcePerTick('catnip', true);
     var woodProd = gamePage.getResourcePerTick('wood', true);
@@ -516,9 +508,9 @@ var goi = setInterval(function() {
 
     var isFoodProdLow = farmer.unlocked && farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
 
-    var woodNeedRatio = k.needs.wood / k.needs.tot;
-    var mineralsNeedRatio = k.needs.minerals / k.needs.tot;
-    var scienceNeedRatio = k.needs.science / k.needs.tot;
+    var woodNeedRatio = k.needs.totWood / k.needs.tot;
+    var mineralsNeedRatio = k.needs.totMinerals / k.needs.tot;
+    var scienceNeedRatio = k.needs.totScience / k.needs.tot;
 
     $('#k-wood').css('width', (isNaN(woodNeedRatio) ? 0 : woodNeedRatio * 100) + "%" );
     $('#k-minerals').css('width', (isNaN(mineralsNeedRatio) ? 0 : mineralsNeedRatio * 100) + "%" );
