@@ -11,6 +11,7 @@ var k = {
     msg: "",
     needs: [],
     const: {
+        ticksPerSecond: 5,
         woodPerBeam: 175,
         beamPerScaffold: 50,
         woodPerScaffold: 50 * 175,
@@ -404,7 +405,8 @@ var goi = setInterval(function() {
         if (k.isFull(craft.raw)) {
             k.log(1, "crafting " + craft.refined);
 
-            var rawAmount = 20 * 5 * gamePage.getResourcePerTick(craft.raw, true);
+            // amount acquired in 20 seconds
+            var rawAmount = 20 * k.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
             var refinedAmount = rawAmount / craft.ratio;
             gamePage.craft(craft.refined, refinedAmount);
         }
