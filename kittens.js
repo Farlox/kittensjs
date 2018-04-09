@@ -234,7 +234,8 @@ var goi = setInterval(function() {
         gamePage.religionTab.praiseBtn.onClick();
     }
 
-    if (gamePage.religionTab.sacrificeBtn.model.enabled) {
+    if (gamePage.religionTab.sacrificeBtn != null &&
+        gamePage.religionTab.sacrificeBtn.model.enabled) {
         k.log(1, "Sacrificing Unicorns");
         gamePage.religionTab.sacrificeBtn.onClick();
     }
