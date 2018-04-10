@@ -93,10 +93,22 @@ var k = {
             k.log(2, "building " + bldLabel);
             k.msg += "built " + bldLabel + "<br/>";
             bld.click();
-        } else if (bld.length == 2 && !$(bld[1]).parent().hasClass('disabled')) {
-            k.log(2, "building " + bldLabel);
-            k.msg += "built " + bldLabel + "<br/>";
-            bld[1].click();
+        } else if (bld.length == 2) {
+            // HACK: workaround for pasture vs unicorn pasture
+            if (bld[0].innerText.substr(0,7) == "Pasture" &&
+                !$(bld[0]).parent().hasClass('disabled'))
+            {
+                k.log(2, "building " + bldLabel);
+                k.msg += "built " + bldLabel + "<br/>";
+                bld[0].click();
+            }
+            else if (bld[1].innerText.substr(0,7) == "Pasture" &&
+                !$(bld[1]).parent().hasClass('disabled'))
+            {
+                k.log(2, "building " + bldLabel);
+                k.msg += "built " + bldLabel + "<br/>";
+                bld[1].click();
+            }
         }
     },
     assign: function(job) {
