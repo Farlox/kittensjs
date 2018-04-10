@@ -507,11 +507,12 @@ var goi = setInterval(function() {
     if (k.needs.scaffold) k.needs.totWood += k.needs.scaffold * k.const.woodPerScaffold;
 
     k.needs.totMinerals = 0;
+    if (k.needs.minerals) k.needs.totMinerals += k.needs.minerals;
     if (k.needs.slab) k.needs.totMinerals += k.needs.slab * k.const.mineralsPerSlab;
 
     k.needs.totScience = 0;
-    if (k.needs.compedium) k.needs.science += k.needs.compedium * k.const.sciencePerCompendium;
-
+    if (k.needs.science) k.needs.totScience += k.needs.science;
+    if (k.needs.compedium) k.needs.totScience += k.needs.compedium * k.const.sciencePerCompendium;
     k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience;
 
     var foodProd = gamePage.getResourcePerTick('catnip', true);
