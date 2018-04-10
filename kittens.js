@@ -1,9 +1,7 @@
 // TODO:
-// make megalith/ziggurat
 // explore for trade
 // trade ship
-// steamworks, magnetos (oil and energy restrictions)
-// other jobs: hunter, priest
+// other jobs: hunter, priest, geologist
 var k = {
     mode: "on",
     logLevel: 2,
@@ -16,11 +14,17 @@ var k = {
         beamPerScaffold: 50,
         woodPerScaffold: 50 * 175,
         mineralsPerSlab: 250,
+        slabsPerConcrete: 2500,
+        steelPerConcrete: 25,
+        iconPerSteel: 100,
+        coalPerSteel: 100,
         steelPerGear: 15,
         titaniumPerAlloy: 10,
         fursPerParchment: 175,
         parchmentsPerManuscript: 25,
-        sciencePerCompendium: 10000
+        sciencePerCompendium: 10000,
+        compendiumsPerBlueprint: 25,
+        sciencePerBlueprint: 25000
     },
     buildorder:
     [
@@ -157,8 +161,6 @@ var goi = setInterval(function() {
         return;
     }
 
-    // TODO: scale k.craftRatio
-    
     // **********************************************************
     // UI - update ui header
     // **********************************************************
@@ -463,6 +465,14 @@ var goi = setInterval(function() {
         gamePage.craft('gear', gap / k.const.steelPerGear );
     }
 
+    if (k.needs.concrate > 0 &&
+        gamePage.resPool.resourceMap.concrate.value < 0.001 * gamePage.resPool.resourceMap.slab.value &&
+        k.canAfford(gamePage.workshop.getCraftPrice(gamePage.workshop.getCraft('concrate'))))
+    {
+        k.log(1, 'crafting concrete');
+        gamePage.craft('concrate', 1);
+    }
+    
     if (k.needs.alloy > 0 &&
         gamePage.workshop.getCraft('alloy').unlocked &&
         gamePage.resPool.resourceMap.alloy.value < 0.1 * gamePage.resPool.resourceMap.titanium.value)
@@ -511,6 +521,7 @@ var goi = setInterval(function() {
     var woodcutter = gamePage.village.getJob("woodcutter");
     var miner = gamePage.village.getJob("miner");
     var scholar = gamePage.village.getJob("scholar");
+    var geologist = gamePage.village.getJob("geologist");
 
     // calculate raw needs based on refined needs
     k.needs.totWood = 0;
@@ -521,27 +532,36 @@ var goi = setInterval(function() {
     k.needs.totMinerals = 0;
     if (k.needs.minerals) k.needs.totMinerals += k.needs.minerals;
     if (k.needs.slab) k.needs.totMinerals += k.needs.slab * k.const.mineralsPerSlab;
+    if (k.needs.concrate) k.needs.totMinerals += k.needs.concrate * k.const.slabsPerConcrete * k.const.mineralsPerSlab;
 
     k.needs.totScience = 0;
     if (k.needs.science) k.needs.totScience += k.needs.science;
     if (k.needs.compedium) k.needs.totScience += k.needs.compedium * k.const.sciencePerCompendium;
-    k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience;
+    if (k.needs.blueprint) k.needs.totScience += (k.needs.blueprint * k.const.compendiumsPerBlueprint * k.const.sciencePerCompendium) +
+                                                (k.needs.blueprint * k.const.sciencePerBlueprint);
 
-    var foodProd = gamePage.getResourcePerTick('catnip', true);
+    k.needs.totCoal = 0;
+    if (k.needs.steel) k.needs.totCoal += k.needs.steel * k.const.coalPerSteel;
+    if (k.needs.gear) k.needs.totCoal += k.needs.gear * k.const.steelPerGear * k.const.coalPerSteel;
+    if (k.needs.concrate) k.needs.totCoal += k.needs.concrate * k.const.steelPerConcrete * k.const.coalPerSteel;
+
+    k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience + k.needs.totCoal;
+
     var woodProd = gamePage.getResourcePerTick('wood', true);
     var mineralsProd = gamePage.getResourcePerTick('minerals', true);
     var scienceProd = gamePage.getResourcePerTick('science', true);
-    var productionTotal =  woodProd + mineralsProd + scienceProd;
-
-    var isFoodProdLow = farmer.unlocked && farmer.value < 2 || (foodProd <= 0 && gamePage.calendar.season < 3);
+    var coalProd = gamePage.getResourcePerTick('coal', true);
+    var productionTotal = woodProd + mineralsProd + scienceProd + coalProd;
 
     var woodNeedRatio = k.needs.totWood / k.needs.tot;
     var mineralsNeedRatio = k.needs.totMinerals / k.needs.tot;
     var scienceNeedRatio = k.needs.totScience / k.needs.tot;
+    var coalNeedRatio = k.needs.totCoal / k.needs.tot;
 
     $('#k-wood').css('width', (isNaN(woodNeedRatio) ? 0 : woodNeedRatio * 100) + "%" );
     $('#k-minerals').css('width', (isNaN(mineralsNeedRatio) ? 0 : mineralsNeedRatio * 100) + "%" );
     $('#k-science').css('width', (isNaN(scienceNeedRatio) ? 0 : scienceNeedRatio * 100) + "%" );
+    $('#k-coal').css('width', (isNaN(coalNeedRatio) ? 0 : coalNeedRatio * 100) + "%" );
 
     var data = [];
     if (woodcutter.unlocked) {
@@ -565,6 +585,13 @@ var goi = setInterval(function() {
             needRatio: scienceNeedRatio
         });
     }
+    if (geologist.unlocked) {
+        data.push({
+            job: geologist,
+            prodRatio: coalProd / productionTotal,
+            needRatio: coalNeedRatio
+        });
+    }
 
     if (data.length > 1) {
         data.forEach(function(d) {
@@ -573,6 +600,9 @@ var goi = setInterval(function() {
 
         data.sort(function(a,b) { return a.delta < b.delta });
 
+        var foodProd = gamePage.getResourcePerTick('catnip', true);
+        var isFoodProdLow = farmer.unlocked && foodProd <= 0 && gamePage.calendar.season < 3;
+    
         // assignment
         if (gamePage.village.getFreeKittens() == 0) k.unassign(data[0].job);
         if (isFoodProdLow) k.assign(farmer)
@@ -591,7 +621,7 @@ k.panel = $("<div id='kcode'><div id='mode' /><div id='k-options'>" +
                 "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
                 "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
                 "</div><div id='k-msg' /><div id='k-bld' />" +
-                "<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-science' class='bar'>science</div></div>" +
+                "<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-science' class='bar'>science</div><div id='k-coal' class='bar'>coal</div></div>" +
                 "</div>");
 k.panel.append("<style>#kcode { margin-left: 4px; }" +
                 "#kcode #mode::before { color: #808080; content: 'mode: ';}" +
