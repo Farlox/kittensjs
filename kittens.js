@@ -1,7 +1,7 @@
 // TODO:
 // explore for trade
 // trade ship
-// other jobs: hunter, priest, geologist
+// other jobs: hunter, priest
 var k = {
     mode: "on",
     logLevel: 2,
@@ -39,6 +39,7 @@ var k = {
         { label: "Pasture", name: 'pasture', prereq: function() { return gamePage.calendar.season < 2; } },
         { label: "Quarry", name: "quarry" },
         { label: "Oil Well", name: "oilWell", prereq: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
+        { label: "Bio Lab", name: "biolab" },
         { label: "Academy", name: "academy" },
         { label: "Library", name: "library" },
         { label: "Observatory", name: "observatory" },
@@ -54,6 +55,34 @@ var k = {
         { label: "Amphitheatre", name: "amphitheatre" },
         { label: "Aqueduct", name: "aqueduct" },
     ],
+    bld: {
+        unicornPasture: {},
+        hut: {},
+        logHouse: {},
+        mansion: {},
+        lumberMill: {},
+        mine: {},
+        aqueduct: {},
+        field: { prereq: function() { return gamePage.calendar.season < 2; } },
+        pasture: { prereq: function() { return gamePage.calendar.season < 2; } },
+        quarry: {},
+        oilWell: { prereq: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
+        biolab: {},
+        academy: {},
+        library: {},
+        observatory: {},
+        temple: {},
+        chapel: {},
+        smelter: { prereq: function() { return k.needs.iron > 0; } },
+        calciner: { prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
+        magneto: { prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 } },
+        barn: {},
+        workshop: {},
+        steamworks: { prereq: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; } },
+        tradepost: {},
+        amphitheatre: {},
+        aqueduct: {}
+    },
     craftorder:
     [
         { raw: "wood", refined: "beam", ratio: 175 },
@@ -155,9 +184,11 @@ var goi = setInterval(function() {
         $(k.panel).find('#mode').html('INIT');
         $(k.panel).find('#k-msg').html('');
 
-        k.build('Catnip field');
-        k.build('Catnip field');
-        k.build('Catnip field');
+        while (gamePage.bld.getPrices('field')[0].val <= gamePage.resPool.resourceMap.catnip.value)
+        {
+            k.build('Catnip field');
+        }
+
         return;
     }
 
@@ -194,14 +225,6 @@ var goi = setInterval(function() {
                 }
             });
             
-            /*
-            var m = gamePage.bld.getPrices('mansion');
-            if (m[0].val < gamePage.resPool.resourceMap.slab.value * 0.1 &&
-                m[2].val < gamePage.resPool.resourceMap.titanium.maxValue * 0.1)
-            {
-                k.build('Mansion');
-            }*/
-
             var w = gamePage.bld.getPrices('warehouse');
             if (gamePage.resPool.resourceMap[w[0].name].value * 0.1 > w[0].val &&
                 gamePage.resPool.resourceMap[w[1].name].value * 0.1 > w[1].val) {
@@ -266,16 +289,26 @@ var goi = setInterval(function() {
 
     // make a ziggurat
     var zigBld = gamePage.bld.get('ziggurat');
-    if (zigBld.unlocked && zigBld.val < 1) {
-        if (k.canAfford(gamePage.bld.getPrices(zigBld.name))) {
-            k.build(zigBld.label);
-        } else {
-            var megalith = gamePage.workshop.getCraft('megalith');
-            if (megalith.unlocked && 
-                gamePage.resPool.resourceMap.megalith.value < 50 && 
-                k.canAfford(megalith.prices)) {
-            
-                gamePage.craft(megalith.name, 1);
+    var megalith = gamePage.workshop.getCraft('megalith');
+
+    if (zigBld.val < 1) {
+        if (megalith.unlocked &&
+            gamePage.resPool.resourceMap.megalith.value < 1 &&
+            k.canAfford(megalith.prices))
+        {
+            gamePage.craft(megalith.name, 1);
+        }
+        if (zigBld.unlocked) {
+            if (k.canAfford(gamePage.bld.getPrices(zigBld.name)))
+            {
+                k.build(zigBld.label);
+            } else {
+                if (megalith.unlocked && 
+                    gamePage.resPool.resourceMap.megalith.value < 50 && 
+                    k.canAfford(megalith.prices))
+                {
+                    gamePage.craft(megalith.name, 1);
+                }
             }
         }
     }
