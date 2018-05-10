@@ -20,8 +20,10 @@ var k = {
         coalPerSteel: 100,
         steelPerGear: 15,
         titaniumPerAlloy: 10,
+        catpowerPerFur: 1, // 100 catpower per hunt, TODO: ~30-170 furs per hunt depending on upgrades
         fursPerParchment: 175,
         parchmentsPerManuscript: 25,
+        manuscriptsPerCompendium: 50,
         sciencePerCompendium: 10000,
         compendiumsPerBlueprint: 25,
         sciencePerBlueprint: 25000
@@ -34,6 +36,7 @@ var k = {
         { label: "Mansion", name: "mansion" },
         { label: "Lumber Mill", name: "lumberMill" }, 
         { label: "Mine", name: "mine" },
+        { label: "Accelerator", name: "accelerator", prereq: function() { return gamePage.getResourcePerTick('titanium', true) >= 0.014 && gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption >= 2; } },
         { label: "Aqueduct", name: "aqueduct" },
         { label: "Catnip field", name: 'field', prereq: function() { return gamePage.calendar.season < 2; } },
         { label: "Pasture", name: 'pasture', prereq: function() { return gamePage.calendar.season < 2; } },
@@ -46,14 +49,13 @@ var k = {
         { label: "Temple", name: "temple" },
         { label: "Chapel", name: "chapel" },
         { label: "Smelter", name: "smelter", prereq: function() { return k.needs.iron > 0; } },
-        { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption } },
-        { label: "Magneto", name: "magneto", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 } },
+        { label: "Calciner", name: "calciner", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.024 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
+        { label: "Magneto", name: "magneto", prereq: function() { return gamePage.getResourcePerTick("oil", true) > 0.05; } },
         { label: "Barn", name: "barn" },
         { label: "Workshop", name: "workshop" },
         { label: "Steamworks", name: "steamworks", prereq: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; } },
         { label: "Tradepost", name: "tradepost" },
         { label: "Amphitheatre", name: "amphitheatre" },
-        { label: "Aqueduct", name: "aqueduct" },
     ],
     bld: {
         unicornPasture: {},
@@ -113,10 +115,10 @@ var k = {
         });
         return cap;
     },
-    click: function(tab, button) {
-        k.pushTab(tab);
-        k.log(2, tab + ": " + button.model.metadata.name);
-        k.msg += tab + ": " + button.model.metadata.label + "<br/>";
+    click: function(tabLabel, button) {
+        k.pushTab(tabLabel);
+        k.log(2, tabLabel + ": " + button.model.metadata.name);
+        k.msg += tabLabel + ": " + button.model.metadata.label + "<br/>";
         button.buttonContent.click();
         k.popTab();
     },
@@ -156,9 +158,9 @@ var k = {
             gamePage.village.sim.removeJob(job.name);
         }
     },
-    pushTab: function(tab) {
+    pushTab: function(tabLabel) {
         k.prevTab = $("a.tab.activeTab")[0].innerText;
-        $('a.tab:contains("' + tab + '")')[0].click();
+        $('a.tab:contains("' + tabLabel + '")')[0].click();
     },
     popTab: function() {
         $('a.tab:contains("' + k.prevTab + '")')[0].click();
@@ -499,7 +501,7 @@ var goi = setInterval(function() {
     }
 
     if (k.needs.concrate > 0 &&
-        gamePage.resPool.resourceMap.concrate.value < 0.001 * gamePage.resPool.resourceMap.slab.value &&
+        gamePage.resPool.resourceMap.concrate.value < 0.01 * gamePage.resPool.resourceMap.slab.value &&
         k.canAfford(gamePage.workshop.getCraftPrice(gamePage.workshop.getCraft('concrate'))))
     {
         k.log(1, 'crafting concrete');
@@ -552,6 +554,7 @@ var goi = setInterval(function() {
     var farmer = gamePage.village.getJob('farmer');
 
     var woodcutter = gamePage.village.getJob("woodcutter");
+    var hunter = gamePage.village.getJob("hunter");
     var miner = gamePage.village.getJob("miner");
     var scholar = gamePage.village.getJob("scholar");
     var geologist = gamePage.village.getJob("geologist");
@@ -573,28 +576,45 @@ var goi = setInterval(function() {
     if (k.needs.blueprint) k.needs.totScience += (k.needs.blueprint * k.const.compendiumsPerBlueprint * k.const.sciencePerCompendium) +
                                                 (k.needs.blueprint * k.const.sciencePerBlueprint);
 
+    if (k.isFull('science')) {
+        k.needs.totScience /= 10;
+    }
+
     k.needs.totCoal = 0;
     if (k.needs.steel) k.needs.totCoal += k.needs.steel * k.const.coalPerSteel;
     if (k.needs.gear) k.needs.totCoal += k.needs.gear * k.const.steelPerGear * k.const.coalPerSteel;
     if (k.needs.concrate) k.needs.totCoal += k.needs.concrate * k.const.steelPerConcrete * k.const.coalPerSteel;
 
-    k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience + k.needs.totCoal;
+    k.needs.totCatpower = 0;
+    if (k.needs.parchment) k.needs.totCatpower += k.needs.parchment * k.const.fursPerParchment * k.const.catpowerPerFur;
+    if (k.needs.manuscript) k.needs.totCatpower += k.needs.manuscript * k.const.parchmentsPerManuscript * k.const.fursPerParchment * k.const.catpowerPerFur;
+    if (k.needs.compedium) k.needs.totCatpower += k.needs.compedium * k.const.manuscriptsPerCompendium * k.const.parchmentsPerManuscript * k.const.fursPerParchment * k.const.catpowerPerFur;
+    if (k.needs.blueprint) k.needs.totCatpower += k.needs.blueprint * k.const.compendiumsPerBlueprint * k.const.manuscriptsPerCompendium * k.const.parchmentsPerManuscript * k.const.fursPerParchment * k.const.catpowerPerFur;
+    k.needs.totCatpower /= 100;
+
+    k.needs.tot = k.needs.totWood + k.needs.totMinerals + k.needs.totScience + k.needs.totCoal + k.needs.totCatpower;
 
     var woodProd = gamePage.getResourcePerTick('wood', true);
     var mineralsProd = gamePage.getResourcePerTick('minerals', true);
     var scienceProd = gamePage.getResourcePerTick('science', true);
     var coalProd = gamePage.getResourcePerTick('coal', true);
-    var productionTotal = woodProd + mineralsProd + scienceProd + coalProd;
+    var ironProd = gamePage.getResourcePerTick('iron', true);
+
+    var catpowerProd = gamePage.getResourcePerTick('manpower', true);
+
+    var productionTotal = woodProd + mineralsProd + scienceProd + coalProd + catpowerProd;
 
     var woodNeedRatio = k.needs.totWood / k.needs.tot;
     var mineralsNeedRatio = k.needs.totMinerals / k.needs.tot;
     var scienceNeedRatio = k.needs.totScience / k.needs.tot;
     var coalNeedRatio = k.needs.totCoal / k.needs.tot;
+    var catpowerNeedRatio = k.needs.totCatpower / k.needs.tot;
 
     $('#k-wood').css('width', (isNaN(woodNeedRatio) ? 0 : woodNeedRatio * 100) + "%" );
     $('#k-minerals').css('width', (isNaN(mineralsNeedRatio) ? 0 : mineralsNeedRatio * 100) + "%" );
     $('#k-science').css('width', (isNaN(scienceNeedRatio) ? 0 : scienceNeedRatio * 100) + "%" );
     $('#k-coal').css('width', (isNaN(coalNeedRatio) ? 0 : coalNeedRatio * 100) + "%" );
+    $('#k-catpower').css('width', (isNaN(catpowerNeedRatio) ? 0 : catpowerNeedRatio * 100) + "%" );
 
     var data = [];
     if (woodcutter.unlocked) {
@@ -625,20 +645,31 @@ var goi = setInterval(function() {
             needRatio: coalNeedRatio
         });
     }
+    if (hunter.unlocked) {
+        data.push({
+            job: hunter,
+            prodRatio: catpowerProd / productionTotal,
+            needRatio: catpowerNeedRatio
+        });
+    }
 
     if (data.length > 1) {
         data.forEach(function(d) {
-            d.delta = d.prodRatio - (isNaN(d.needRatio) ? 0 : d.needRatio);
+            if (d.job.name == "geologist" && ironProd < coalProd) {
+                d.delta = coalProd - ironProd;
+            } else {
+                d.delta = d.prodRatio - (isNaN(d.needRatio) ? 0 : d.needRatio);
+            }
         });
 
-        data.sort(function(a,b) { return a.delta < b.delta });
+        data.sort(function(a,b) { return a.delta < b.delta; });
 
         var foodProd = gamePage.getResourcePerTick('catnip', true);
         var isFoodProdLow = farmer.unlocked && foodProd <= 0 && gamePage.calendar.season < 3;
     
         // assignment
         if (gamePage.village.getFreeKittens() == 0) k.unassign(data[0].job);
-        if (isFoodProdLow) k.assign(farmer)
+        if (isFoodProdLow) k.assign(farmer);
         else k.assign(data[data.length - 1].job);
     }
 
@@ -654,7 +685,7 @@ k.panel = $("<div id='kcode'><div id='mode' /><div id='k-options'>" +
                 "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
                 "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
                 "</div><div id='k-msg' /><div id='k-bld' />" +
-                "<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-science' class='bar'>science</div><div id='k-coal' class='bar'>coal</div></div>" +
+                "<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-coal' class='bar'>coal</div><div id='k-catpower' class='bar'>catpower</div><div id='k-science' class='bar'>science</div></div>" +
                 "</div>");
 k.panel.append("<style>#kcode { margin-left: 4px; }" +
                 "#kcode #mode::before { color: #808080; content: 'mode: ';}" +
