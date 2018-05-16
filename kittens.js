@@ -37,6 +37,7 @@ var k = {
         { label: "Lumber Mill", name: "lumberMill" }, 
         { label: "Mine", name: "mine" },
         { label: "Accelerator", name: "accelerator", prereq: function() { return gamePage.getResourcePerTick('titanium', true) >= 0.014 && gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption >= 2; } },
+        { label: "Reactor", name: "reactor", prereq: function() { return gamePage.getResourcePerTick('uranium', true) >= 0.001; } },
         { label: "Aqueduct", name: "aqueduct" },
         { label: "Catnip field", name: 'field', prereq: function() { return gamePage.calendar.season < 2; } },
         { label: "Pasture", name: 'pasture', prereq: function() { return gamePage.calendar.season < 2; } },
@@ -91,7 +92,8 @@ var k = {
         { raw: "catnip", refined: "wood", ratio: 100 },
         { raw: "wood", refined: "beam", ratio: 175 },
         { raw: "minerals", refined: "slab", ratio: 250 },
-        { raw: "titanium", refined: "alloy", ratio: 10 }
+        { raw: "titanium", refined: "alloy", ratio: 10 },
+        { raw: "oil", refined: "kerosene", ratio: 7500 },
     ],
     isFull: function(resName) {
         return (gamePage.resPool.resourceMap[resName].value / gamePage.resPool.resourceMap[resName].maxValue) >= 0.95
@@ -655,14 +657,19 @@ var goi = setInterval(function() {
 
     if (data.length > 1) {
         data.forEach(function(d) {
-            if (d.job.name == "geologist" && ironProd < coalProd) {
-                d.delta = coalProd - ironProd;
+            if (d.job.name == geologist.name && ironProd < coalProd) {
+                d.investWeight = (ironProd - coalProd) / productionTotal;
+            } else if (d.job.name == scholar.name && k.isFull('science')) {
+                d.investWeight = -d.prodRatio;
             } else {
-                d.delta = d.prodRatio - (isNaN(d.needRatio) ? 0 : d.needRatio);
+                d.investWeight = (isNaN(d.needRatio) ? 0 : d.needRatio) - d.prodRatio;
             }
         });
 
-        data.sort(function(a,b) { return a.delta < b.delta; });
+        data.sort(function(a,b) { return a.investWeight - b.investWeight; });
+
+        k.log(1, "\njob production investment weights");
+        data.forEach(function(d) { k.log(1, d.job.name + " : " + d.investWeight); });
 
         var foodProd = gamePage.getResourcePerTick('catnip', true);
         var isFoodProdLow = farmer.unlocked && foodProd <= 0 && gamePage.calendar.season < 3;
