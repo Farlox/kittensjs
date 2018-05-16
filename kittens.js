@@ -41,7 +41,6 @@ var k = {
         { label: "Aqueduct", name: "aqueduct" },
         { label: "Catnip field", name: 'field', prereq: function() { return gamePage.calendar.season < 2; } },
         { label: "Pasture", name: 'pasture', prereq: function() { return gamePage.calendar.season < 2; } },
-        { label: "Quarry", name: "quarry" },
         { label: "Oil Well", name: "oilWell", prereq: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; } },
         { label: "Bio Lab", name: "biolab" },
         { label: "Academy", name: "academy" },
@@ -94,6 +93,7 @@ var k = {
         { raw: "minerals", refined: "slab", ratio: 250 },
         { raw: "titanium", refined: "alloy", ratio: 10 },
         { raw: "oil", refined: "kerosene", ratio: 7500 },
+        { raw: "uranium", refined: "thorium", ratio: 250 }
     ],
     isFull: function(resName) {
         return (gamePage.resPool.resourceMap[resName].value / gamePage.resPool.resourceMap[resName].maxValue) >= 0.95
@@ -240,6 +240,13 @@ var goi = setInterval(function() {
                 gamePage.resPool.resourceMap[h[1].name].value * 0.1 > h[1].val &&
                 gamePage.resPool.resourceMap[h[2].name].value * 0.1 > h[2].val) {
                 k.build('Harbour');
+            }
+
+            var q = gamePage.bld.getPrices('quarry');
+            if (gamePage.resPool.resourceMap[q[0].name].value * 0.1 > q[0].val &&
+                gamePage.resPool.resourceMap[q[1].name].value * 0.1 > q[1].val &&
+                gamePage.resPool.resourceMap[q[2].name].value * 0.1 > q[2].val) {
+                k.build('Quarry');
             }
         }
     }
