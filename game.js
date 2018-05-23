@@ -53,6 +53,11 @@ var Game = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Game, "SpaceTab", {
+        get: function () { return gamePage.spaceTab; },
+        enumerable: true,
+        configurable: true
+    });
     return Game;
 }());
 Game.const = {

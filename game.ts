@@ -67,6 +67,7 @@ class Game {
     static get BonfireTab() { return gamePage.tabs[0]; }
     static get WorkshopTab() { return gamePage.workshopTab; }
     static get ScienceTab() { return gamePage.libraryTab; }
+    static get SpaceTab() { return gamePage.spaceTab; }
 }
 
 interface GamePage {
@@ -105,7 +106,8 @@ interface GamePage {
     tabs : Tab[];
     workshopTab: Tab;
     libraryTab: Tab;
-
+    spaceTab: Tab;
+    
     getResourcePerTick(resName: string, alwaysTrue: boolean) : number;
 }
 
