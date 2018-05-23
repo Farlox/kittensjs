@@ -28,6 +28,10 @@ class Game {
     static getResourcePerTick(resourceName: string) { return gamePage.getResourcePerTick(resourceName, true); }
     static getResource(resourceName: string) : Resource { return gamePage.resPool.resourceMap[resourceName]; }
 
+    static getCraft(resourceName: string) : Craft {
+        return gamePage.workshop.getCraft(resourceName);
+    }
+
     static craft(resourceName: string, val: number) {
         gamePage.craft(resourceName, val);
     }
@@ -120,6 +124,7 @@ interface Craft {
 
 interface Resource {
     name: string;
+    craftable: boolean;
     unlocked: boolean;
     value: number;
     maxValue: number;

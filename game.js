@@ -6,6 +6,9 @@ var Game = (function () {
     Game.isWinter = function () { return gamePage.calendar.season == 3; };
     Game.getResourcePerTick = function (resourceName) { return gamePage.getResourcePerTick(resourceName, true); };
     Game.getResource = function (resourceName) { return gamePage.resPool.resourceMap[resourceName]; };
+    Game.getCraft = function (resourceName) {
+        return gamePage.workshop.getCraft(resourceName);
+    };
     Game.craft = function (resourceName, val) {
         gamePage.craft(resourceName, val);
     };
