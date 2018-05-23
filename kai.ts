@@ -18,7 +18,7 @@ let convertToRaw = function(prices : Price[]) : Price[] {
                     val: price.val
                 });
             } else {
-                let craft = gamePage.workshop.getCraft(price.name);
+                let craft = Game.getCraft(price.name);
                 if (craft != null) {
                     more = true;
                     craft.prices.forEach(
@@ -145,17 +145,24 @@ class Kai {
 
         // TODO: craft resources that are at capped
         for (let craft of this.craftOrder) {
-            if (this.isFull(craft.raw) && Game.getResource(craft.refined).unlocked) {
+            if (this.isFull(craft.raw) && Game.getResource(craft.refined).craftable) {
                 // amount acquired in 20 seconds
                 let seconds = 20;
                 let rawAmount = seconds * Game.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
                 let refinedAmount = rawAmount / craft.ratio;
                 if (refinedAmount <= 0) continue;
                 gamePage.craft(craft.refined, refinedAmount);
-                console.log("KAI: crafted " + craft.refined);
+                console.log("KAI: crafted " + refinedAmount + " " + craft.refined);
             }
         }
         // TODO: beam to scaffold if needed
+        let beam = Game.getResource('beam');
+        let scaffold = Game.getResource('scaffold');
+        if (scaffold.unlocked && beam.value >= Game.const.beamPerScaffold && scaffold.value < 0.1 * beam.value) {
+            let amount = Math.max(1, 0.01 * beam.value / Game.const.beamPerScaffold);
+            console.log("KAI: crafted " + amount + " scaffold");
+            Game.craft('scaffold', amount);
+        }
         if (this.isFull('coal')) {
 
         }
@@ -235,6 +242,7 @@ class Kai {
         { raw: "iron", refined: "plate", ratio: 125 },
         { raw: "titanium", refined: "alloy", ratio: 10 },
         { raw: "oil", refined: "kerosene", ratio: 7500 },
+        { raw: "uranium", refined: "thorium", ratio: 250 },
     ];
 
     // lists actions within capacity

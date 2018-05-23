@@ -18,7 +18,7 @@ var convertToRaw = function (prices) {
                 });
             }
             else {
-                var craft = gamePage.workshop.getCraft(price.name);
+                var craft = Game.getCraft(price.name);
                 if (craft != null) {
                     more = true;
                     craft.prices.forEach(function (craftPrice) {
@@ -143,7 +143,11 @@ var Kai = (function () {
             { raw: "catnip", refined: "wood", ratio: 100 },
             { raw: "wood", refined: "beam", ratio: 175 },
             { raw: "minerals", refined: "slab", ratio: 250 },
-            { raw: "titanium", refined: "alloy", ratio: 10 }
+            { raw: "coal", refined: "steel", ratio: 100 },
+            { raw: "iron", refined: "plate", ratio: 125 },
+            { raw: "titanium", refined: "alloy", ratio: 10 },
+            { raw: "oil", refined: "kerosene", ratio: 7500 },
+            { raw: "uranium", refined: "thorium", ratio: 250 },
         ];
     }
     Kai.prototype.stop = function () {
@@ -180,7 +184,7 @@ var Kai = (function () {
         // TODO: craft resources that are at capped
         for (var _f = 0, _g = this.craftOrder; _f < _g.length; _f++) {
             var craft = _g[_f];
-            if (this.isFull(craft.raw)) {
+            if (this.isFull(craft.raw) && Game.getResource(craft.refined).craftable) {
                 // amount acquired in 20 seconds
                 var seconds = 20;
                 var rawAmount = seconds * Game.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
@@ -188,8 +192,20 @@ var Kai = (function () {
                 if (refinedAmount <= 0)
                     continue;
                 gamePage.craft(craft.refined, refinedAmount);
-                console.log("KAI: crafted " + craft.refined);
+                console.log("KAI: crafted " + refinedAmount + " " + craft.refined);
             }
+        }
+        // TODO: beam to scaffold if needed
+        var beam = Game.getResource('beam');
+        var scaffold = Game.getResource('scaffold');
+        if (scaffold.unlocked && beam.value >= Game.const.beamPerScaffold && scaffold.value < 0.1 * beam.value) {
+            var amount = Math.max(1, 0.01 * beam.value / Game.const.beamPerScaffold);
+            console.log("KAI: crafted " + amount + " scaffold");
+            Game.craft('scaffold', amount);
+        }
+        if (this.isFull('coal')) {
+        }
+        if (this.isFull('iron')) {
         }
         // TODO: trade/explore
         // TODO: balance jobs
