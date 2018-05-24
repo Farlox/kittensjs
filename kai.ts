@@ -141,6 +141,19 @@ class Kai {
             }
         }
 
+        // 2. Build space things
+        for (let planet of Game.SpaceTab.planetPanels) {
+            for (let btn of planet.children) {
+                if (btn.model.visible &&
+                    btn.model.metadata !== undefined &&
+                    btn.model.metadata.unlocked &&
+                    this.canAfford(btn.model.prices))
+                {
+                    new Action("Space", btn).click();
+                }
+            }
+        }
+
         // TODO: determine needs for the next items
 
         // TODO: craft resources that are at capped

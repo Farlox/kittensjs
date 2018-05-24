@@ -110,7 +110,7 @@ interface GamePage {
     tabs : Tab[];
     workshopTab: Tab;
     libraryTab: Tab;
-    spaceTab: Tab;
+    spaceTab: SpaceTab;
 
     getResourcePerTick(resName: string, alwaysTrue: boolean) : number;
 }
@@ -118,6 +118,10 @@ interface GamePage {
 interface Tab {
     visible: boolean;
     buttons: Button[];
+}
+
+interface SpaceTab extends Tab {
+    planetPanels : any[];
 }
 
 interface Button {

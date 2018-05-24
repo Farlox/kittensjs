@@ -180,10 +180,23 @@ var Kai = (function () {
                     break;
             }
         }
+        // 2. Build space things
+        for (var _f = 0, _g = Game.SpaceTab.planetPanels; _f < _g.length; _f++) {
+            var planet = _g[_f];
+            for (var _h = 0, _j = planet.children; _h < _j.length; _h++) {
+                var btn = _j[_h];
+                if (btn.model.visible &&
+                    btn.model.metadata !== undefined &&
+                    btn.model.metadata.unlocked &&
+                    this.canAfford(btn.model.prices)) {
+                    new Action("Space", btn).click();
+                }
+            }
+        }
         // TODO: determine needs for the next items
         // TODO: craft resources that are at capped
-        for (var _f = 0, _g = this.craftOrder; _f < _g.length; _f++) {
-            var craft = _g[_f];
+        for (var _k = 0, _l = this.craftOrder; _k < _l.length; _k++) {
+            var craft = _l[_k];
             if (this.isFull(craft.raw) && Game.getResource(craft.refined).craftable) {
                 // amount acquired in 20 seconds
                 var seconds = 20;
