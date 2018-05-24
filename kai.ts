@@ -148,10 +148,10 @@ class Kai {
             if (this.isFull(craft.raw) && Game.getResource(craft.refined).craftable) {
                 // amount acquired in 20 seconds
                 let seconds = 20;
-                let rawAmount = seconds * Game.const.ticksPerSecond * gamePage.getResourcePerTick(craft.raw, true);
+                let rawAmount = seconds * Game.const.ticksPerSecond * Game.getResourcePerTick(craft.raw);
                 let refinedAmount = rawAmount / craft.ratio;
                 if (refinedAmount <= 0) continue;
-                gamePage.craft(craft.refined, refinedAmount);
+                Game.craft(craft.refined, refinedAmount);
                 console.log("KAI: crafted " + refinedAmount + " " + craft.refined);
             }
         }
@@ -211,26 +211,26 @@ class Kai {
     prereqs = {
         field: function() { return Game.isSpringSummer() },
         pasture: function() { return Game.isSpringSummer(); },
-        steamworks: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; },
-        oilWell: function() { return !gamePage.workshop.get('pumpjack').unlocked || gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; },
+        steamworks: function() { return Game.NetEnergy < 2; },
+        oilWell: function() { return !gamePage.workshop.get('pumpjack').unlocked || Game.NetEnergy > 0; },
         //smelter: function() { return k.needs.iron > 0; },
         warehouse: function() {
             let w = gamePage.bld.getPrices('warehouse');
-            return gamePage.resPool.resourceMap[w[0].name].value * 0.1 > w[0].val &&
-                   gamePage.resPool.resourceMap[w[1].name].value * 0.1 > w[1].val;
+            return Game.getResource(w[0].name).value * 0.1 > w[0].val &&
+                   Game.getResource(w[1].name).value * 0.1 > w[1].val;
         },
         harbor: function() {
             var h = gamePage.bld.getPrices('harbor');
-            return gamePage.resPool.resourceMap[h[0].name].value * 0.1 > h[0].val &&
-                   gamePage.resPool.resourceMap[h[1].name].value * 0.1 > h[1].val &&
-                   gamePage.resPool.resourceMap[h[2].name].value * 0.1 > h[2].val;
+            return Game.getResource(h[0].name).value * 0.1 > h[0].val &&
+                   Game.getResource(h[1].name).value * 0.1 > h[1].val &&
+                   Game.getResource(h[2].name).value * 0.1 > h[2].val;
         },
-        calciner: function() { return gamePage.getResourcePerTick("oil", true) > 0.05 && gamePage.globalEffectsCached.energyProduction > gamePage.globalEffectsCached.energyConsumption; },
-        magneto: function() { return gamePage.getResourcePerTick("oil", true) > 0.05; },
-        reactor: function() { return gamePage.getResourcePerTick("uranium", true) >= 0.001; },
+        calciner: function() { return Game.getResourcePerTick("oil") > 0.05 && Game.NetEnergy > 0; },
+        magneto: function() { return Game.getResourcePerTick("oil") > 0.05; },
+        reactor: function() { return Game.getResourcePerTick("uranium") >= 0.001; },
         ziggurat: function() { return gamePage.bld.get('ziggurat').val < 1; },
         factory: function() { return false; },
-        mint: function() { return false; },
+        mint: function() { Game.getResourcePerTick('furs') < 0 || Game.getResourcePerTick('ivory') < 0 },
     };
 
     craftOrder = [
@@ -263,7 +263,7 @@ class Kai {
         };
 
         // workshop upgrades
-        if (gamePage.workshopTab.visible) {
+        if (Game.WorkshopTab.visible) {
             for (let btn of Game.WorkshopTab.buttons) {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked &&
@@ -276,7 +276,7 @@ class Kai {
         }
 
         // science research
-        if (gamePage.libraryTab.visible) {
+        if (Game.ScienceTab.visible) {
             for (let btn of Game.ScienceTab.buttons) {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked && 
