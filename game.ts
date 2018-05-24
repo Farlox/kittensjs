@@ -68,6 +68,10 @@ class Game {
     static get WorkshopTab() { return gamePage.workshopTab; }
     static get ScienceTab() { return gamePage.libraryTab; }
     static get SpaceTab() { return gamePage.spaceTab; }
+
+    static get EnergyProduction() { return gamePage.globalEffectsCached.energyProduction; }
+    static get EnergyConsumption() { return gamePage.globalEffectsCached.energyConsumption; }
+    static get NetEnergy() { return Game.EnergyProduction - Game.EnergyConsumption; }
 }
 
 interface GamePage {
@@ -107,7 +111,7 @@ interface GamePage {
     workshopTab: Tab;
     libraryTab: Tab;
     spaceTab: Tab;
-    
+
     getResourcePerTick(resName: string, alwaysTrue: boolean) : number;
 }
 

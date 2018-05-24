@@ -58,6 +58,21 @@ var Game = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Game, "EnergyProduction", {
+        get: function () { return gamePage.globalEffectsCached.energyProduction; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game, "EnergyConsumption", {
+        get: function () { return gamePage.globalEffectsCached.energyConsumption; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Game, "NetEnergy", {
+        get: function () { return Game.EnergyProduction - Game.EnergyConsumption; },
+        enumerable: true,
+        configurable: true
+    });
     return Game;
 }());
 Game.const = {
