@@ -1,48 +1,4 @@
 // Kitten Kai
-var gamePage;
-var convertToRaw = function (prices) {
-    var tempPrices = prices;
-    var rawPrices = [];
-    var more = true;
-    while (more) {
-        more = false;
-        rawPrices = [];
-        var _loop_1 = function (price) {
-            if (price.name == "wood") {
-                rawPrices.push(price);
-            }
-            else if (price.name == "furs") {
-                rawPrices.push({
-                    name: 'manpower',
-                    val: price.val
-                });
-            }
-            else {
-                var craft = Game.getCraft(price.name);
-                if (craft != null) {
-                    more = true;
-                    craft.prices.forEach(function (craftPrice) {
-                        rawPrices.push({
-                            name: craftPrice.name,
-                            val: craftPrice.val * price.val
-                        });
-                    });
-                }
-                else {
-                    // TODO: will this push duplicates? (ex: two sciences for blueprint?)
-                    rawPrices.push(price);
-                }
-            }
-        };
-        for (var _i = 0, tempPrices_1 = tempPrices; _i < tempPrices_1.length; _i++) {
-            var price = tempPrices_1[_i];
-            _loop_1(price);
-        }
-        ;
-        tempPrices = rawPrices;
-    }
-    return rawPrices;
-};
 var Action = (function () {
     function Action(tabName, button) {
         this._gap = null;
@@ -94,7 +50,7 @@ var Action = (function () {
         get: function () {
             if (this._time == null) {
                 this._time = 0;
-                var rawGap = convertToRaw(this.gap);
+                var rawGap = Planner.convertToRaw(this.gap);
                 for (var _i = 0, rawGap_1 = rawGap; _i < rawGap_1.length; _i++) {
                     var gap = rawGap_1[_i];
                     if (Game.getResourcePerTick(gap.name) < 0) {
@@ -114,6 +70,7 @@ var Action = (function () {
 var Kai = (function () {
     function Kai() {
         this.intervalId = undefined;
+        this.needs = [];
         this.prereqs = {
             field: function () { return Game.isSpringSummer(); },
             pasture: function () { return Game.isSpringSummer(); },
@@ -181,19 +138,22 @@ var Kai = (function () {
             }
         }
         // 2. Build space things
-        for (var _f = 0, _g = Game.SpaceTab.planetPanels; _f < _g.length; _f++) {
-            var planet = _g[_f];
-            for (var _h = 0, _j = planet.children; _h < _j.length; _h++) {
-                var btn = _j[_h];
-                if (btn.model.visible &&
-                    btn.model.metadata !== undefined &&
-                    btn.model.metadata.unlocked &&
-                    this.canAfford(btn.model.prices)) {
-                    new Action("Space", btn).click();
+        if (Game.SpaceTab.visible) {
+            for (var _f = 0, _g = Game.SpaceTab.planetPanels; _f < _g.length; _f++) {
+                var planet = _g[_f];
+                for (var _h = 0, _j = planet.children; _h < _j.length; _h++) {
+                    var btn = _j[_h];
+                    if (btn.model.visible &&
+                        btn.model.metadata !== undefined &&
+                        btn.model.metadata.unlocked &&
+                        Planner.canAfford(btn.model.prices)) {
+                        new Action("Space", btn).click();
+                    }
                 }
             }
         }
         // TODO: determine needs for the next items
+        this.needs = Planner.CalcNeeds();
         // TODO: craft resources that are at capped
         for (var _k = 0, _l = this.craftOrder; _k < _l.length; _k++) {
             var craft = _l[_k];
@@ -239,7 +199,7 @@ var Kai = (function () {
                     btn.model.metadata !== undefined &&
                     btn.model.metadata.unlocked &&
                     !btn.model.metadata.researched &&
-                    this.canAfford(btn.model.prices)) {
+                    Planner.canAfford(btn.model.prices)) {
                     actions.push(new Action(tabLabel, btn));
                 }
             }
@@ -260,7 +220,7 @@ var Kai = (function () {
                 var model = b.model;
                 var name = model.metadata.name;
                 if ((this.prereqs[name] === undefined || this.prereqs[name]()) &&
-                    this.haveCapacity(model.prices)) {
+                    Planner.haveCapacity(model.prices)) {
                     actions.push(new Action('Bonfire', b));
                 }
             }
@@ -273,7 +233,7 @@ var Kai = (function () {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked &&
                     !btn.model.metadata.researched &&
-                    this.haveCapacity(btn.model.prices)) {
+                    Planner.haveCapacity(btn.model.prices)) {
                     actions.push(new Action('Workshop', btn));
                 }
             }
@@ -285,34 +245,13 @@ var Kai = (function () {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked &&
                     !btn.model.metadata.researched &&
-                    this.haveCapacity(btn.model.prices)) {
+                    Planner.haveCapacity(btn.model.prices)) {
                     actions.push(new Action('Science', btn));
                 }
             }
             ;
         }
         return actions;
-    };
-    Kai.prototype.haveCapacity = function (prices) {
-        for (var _i = 0, prices_1 = prices; _i < prices_1.length; _i++) {
-            var cost = prices_1[_i];
-            var res = Game.getResource(cost.name);
-            if (res.maxValue > 0 && cost.val > res.maxValue) {
-                return false;
-            }
-        }
-        ;
-        return true;
-    };
-    Kai.prototype.canAfford = function (prices) {
-        for (var _i = 0, prices_2 = prices; _i < prices_2.length; _i++) {
-            var cost = prices_2[_i];
-            if (Game.getResource(cost.name).value < cost.val) {
-                return false;
-            }
-        }
-        ;
-        return true;
     };
     return Kai;
 }());

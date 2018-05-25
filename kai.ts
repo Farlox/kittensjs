@@ -1,46 +1,4 @@
 // Kitten Kai
-let gamePage : GamePage;
-
-let convertToRaw = function(prices : Price[]) : Price[] {
-    var tempPrices = prices;
-    var rawPrices : Price[] = [];
-    
-    let more: boolean = true;
-    while (more) {
-        more = false;
-        rawPrices = [];
-        for (let price of tempPrices) {
-            if (price.name == "wood") {
-                rawPrices.push(price);
-            } else if (price.name == "furs") {
-                rawPrices.push({
-                    name: 'manpower',
-                    val: price.val
-                });
-            } else {
-                let craft = Game.getCraft(price.name);
-                if (craft != null) {
-                    more = true;
-                    craft.prices.forEach(
-                        function(craftPrice) { rawPrices.push(
-                        { 
-                            name: craftPrice.name,
-                            val: craftPrice.val * price.val
-                        });
-                    })
-                } else {
-                    // TODO: will this push duplicates? (ex: two sciences for blueprint?)
-                    rawPrices.push(price);
-                }
-            }
-        };
-
-        tempPrices = rawPrices;
-    }
-
-    return rawPrices;
-}
-
 class Action
 {
     private tabName: string;
@@ -93,7 +51,7 @@ class Action
     get time() {
         if (this._time == null) {
             this._time = 0;
-            var rawGap = convertToRaw(this.gap);
+            var rawGap = Planner.convertToRaw(this.gap);
             for (let gap of rawGap) {
                 if (Game.getResourcePerTick(gap.name) < 0) {
                     this._time = Infinity;
@@ -110,6 +68,7 @@ class Action
 
 class Kai {
     public intervalId: number = undefined;
+    public needs: Price[] = [];
 
     public stop() {
         if (this.intervalId != undefined) {
@@ -142,19 +101,22 @@ class Kai {
         }
 
         // 2. Build space things
-        for (let planet of Game.SpaceTab.planetPanels) {
-            for (let btn of planet.children) {
-                if (btn.model.visible &&
-                    btn.model.metadata !== undefined &&
-                    btn.model.metadata.unlocked &&
-                    this.canAfford(btn.model.prices))
-                {
-                    new Action("Space", btn).click();
+        if (Game.SpaceTab.visible) {
+            for (let planet of Game.SpaceTab.planetPanels) {
+                for (let btn of planet.children) {
+                    if (btn.model.visible &&
+                        btn.model.metadata !== undefined &&
+                        btn.model.metadata.unlocked &&
+                        Planner.canAfford(btn.model.prices))
+                    {
+                        new Action("Space", btn).click();
+                    }
                 }
             }
         }
 
         // TODO: determine needs for the next items
+        this.needs = Planner.CalcNeeds();
 
         // TODO: craft resources that are at capped
         for (let craft of this.craftOrder) {
@@ -206,7 +168,7 @@ class Kai {
                     btn.model.metadata !== undefined &&
                     btn.model.metadata.unlocked &&
                     !btn.model.metadata.researched &&
-                    this.canAfford(btn.model.prices))
+                    Planner.canAfford(btn.model.prices))
                 {
                     actions.push(new Action(tabLabel, btn));
                 }
@@ -269,7 +231,7 @@ class Kai {
                 var name = model.metadata.name;
 
                 if ((this.prereqs[name] === undefined || this.prereqs[name]()) &&
-                    this.haveCapacity(model.prices)) {
+                    Planner.haveCapacity(model.prices)) {
                     actions.push(new Action('Bonfire', b));
                 }
             }
@@ -281,7 +243,7 @@ class Kai {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked &&
                     !btn.model.metadata.researched &&
-                    this.haveCapacity(btn.model.prices))
+                    Planner.haveCapacity(btn.model.prices))
                 {
                     actions.push(new Action('Workshop', btn));
                 }
@@ -294,7 +256,7 @@ class Kai {
                 if (btn.model.visible &&
                     btn.model.metadata.unlocked && 
                     !btn.model.metadata.researched &&
-                    this.haveCapacity(btn.model.prices))
+                    Planner.haveCapacity(btn.model.prices))
                 {
                     actions.push(new Action('Science', btn));
                 }
@@ -302,27 +264,6 @@ class Kai {
         }
         
         return actions;
-    }
-
-    private haveCapacity(prices: Price[]) : boolean {
-        for (let cost of prices) {
-            var res = Game.getResource(cost.name);
-            if (res.maxValue > 0 && cost.val > res.maxValue) {
-                return false;
-            }
-        };
-
-        return true;
-    }
-
-    private canAfford(prices: Price[]) : boolean {
-        for (let cost of prices) {
-            if (Game.getResource(cost.name).value < cost.val) {
-                return false;
-            }
-        };
-
-        return true;
     }
 }
 

@@ -1,4 +1,5 @@
 var $;
+var gamePage;
 var Game = (function () {
     function Game() {
     }

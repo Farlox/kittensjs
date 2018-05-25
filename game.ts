@@ -1,4 +1,5 @@
 let $: any;
+let gamePage : GamePage;
 
 class Game {
     static const = {
@@ -112,6 +113,8 @@ interface GamePage {
     libraryTab: Tab;
     spaceTab: SpaceTab;
 
+    science: any;
+    
     getResourcePerTick(resName: string, alwaysTrue: boolean) : number;
 }
 
