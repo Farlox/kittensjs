@@ -93,7 +93,8 @@ var k = {
         { raw: "minerals", refined: "slab", ratio: 250 },
         { raw: "titanium", refined: "alloy", ratio: 10 },
         { raw: "oil", refined: "kerosene", ratio: 7500 },
-        { raw: "uranium", refined: "thorium", ratio: 250 }
+        { raw: "uranium", refined: "thorium", ratio: 250 },
+        { raw: "unobtainium", refined: "eludium", ratio: 1000 }
     ],
     isFull: function(resName) {
         return (gamePage.resPool.resourceMap[resName].value / gamePage.resPool.resourceMap[resName].maxValue) >= 0.95
