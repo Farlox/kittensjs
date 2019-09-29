@@ -15,7 +15,7 @@ interface Button {
 }
 
 interface Price {
-    name: string;
+    name: ResourceName;
     val: number;
 }
 
@@ -32,21 +32,58 @@ interface Resource {
     maxValue: number;
 }
 
+interface Building {
+    label: string;
+    name: string;
+    // on: number;
+    prices: Price[];
+    unlockable: boolean;
+    unlocked: boolean;
+    val: number;
+}
+
+interface Job {
+    description: string;
+    modifiers: any;
+    name: JobName;
+    title: string;
+    unlocked: boolean;
+    value: number;
+}
+
 interface GamePage {
     calendar: {
         season: number;
     };
 
     resPool: any;
+    getResourcePerTick(resName: ResourceName, withConversion: boolean);
+
+    craft: (resName: ResourceName, value: number) => void;
 
     tabs: Tab[];
     libraryTab: Tab;
-}
+    workshopTab: Tab;
 
-type TabName = 'Bonfire' | 'Science';
+    bld: {
+        get(buildingName: BuildingName): Building;
+    };
+
+    village: {
+        getJob(jobName: JobName);
+        assignJob(job: Job);
+        getFreeKittens(): number;
+        sim: {
+            removeJob(jobName: JobName);
+        };
+
+        huntAll: () => void;
+    };
+}
 
 class Game {
     static intervalId?: number;
+    static view: View;
 
     static isSpringSummer = () => gamePage.calendar.season < 2;
 
@@ -58,11 +95,23 @@ class Game {
         return gamePage.libraryTab;
     }
 
-    static getResource(resourceName: string): Resource {
+    static get WorkshopTab() {
+        return gamePage.workshopTab;
+    }
+
+    static getResource(resourceName: ResourceName): Resource {
         return gamePage.resPool.resourceMap[resourceName];
     }
 
-    static isFull(resourceName: string): boolean {
+    static getResourcePerTick(resourceName: ResourceName): number {
+        return gamePage.getResourcePerTick(resourceName, true);
+    }
+
+    static craft(resourceName: ResourceName, amount: number) {
+        gamePage.craft(resourceName, amount);
+    }
+
+    static isFull(resourceName: ResourceName): boolean {
         let res = Game.getResource(resourceName);
         return res.value >= res.maxValue * 0.95;
     }
@@ -98,6 +147,26 @@ class Game {
     static popTab() {
         $('a.tab:contains("' + Game.prevTab + '")')[0].click();
         Game.prevTab = null;
+    }
+
+    static get freeKittens() {
+        return gamePage.village.getFreeKittens();
+    }
+    static getJob(jobName: JobName): Job {
+        return gamePage.village.getJob(jobName);
+    }
+    static assignJob(job: Job): boolean {
+        if (job.unlocked) {
+            gamePage.village.assignJob(job);
+            return true;
+        }
+
+        return false;
+    }
+    static unassignJob(job: Job) {
+        if (job.unlocked) {
+            gamePage.village.sim.removeJob(job.name);
+        }
     }
 }
 

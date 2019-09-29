@@ -5,8 +5,17 @@ class Game {
     static get ScienceTab() {
         return gamePage.libraryTab;
     }
+    static get WorkshopTab() {
+        return gamePage.workshopTab;
+    }
     static getResource(resourceName) {
         return gamePage.resPool.resourceMap[resourceName];
+    }
+    static getResourcePerTick(resourceName) {
+        return gamePage.getResourcePerTick(resourceName, true);
+    }
+    static craft(resourceName, amount) {
+        gamePage.craft(resourceName, amount);
     }
     static isFull(resourceName) {
         let res = Game.getResource(resourceName);
@@ -36,6 +45,24 @@ class Game {
     static popTab() {
         $('a.tab:contains("' + Game.prevTab + '")')[0].click();
         Game.prevTab = null;
+    }
+    static get freeKittens() {
+        return gamePage.village.getFreeKittens();
+    }
+    static getJob(jobName) {
+        return gamePage.village.getJob(jobName);
+    }
+    static assignJob(job) {
+        if (job.unlocked) {
+            gamePage.village.assignJob(job);
+            return true;
+        }
+        return false;
+    }
+    static unassignJob(job) {
+        if (job.unlocked) {
+            gamePage.village.sim.removeJob(job.name);
+        }
     }
 }
 Game.isSpringSummer = () => gamePage.calendar.season < 2;
