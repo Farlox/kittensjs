@@ -8,13 +8,29 @@ class Game {
     static get WorkshopTab() {
         return gamePage.workshopTab;
     }
+    static get ReligionTab() {
+        return gamePage.religionTab;
+    }
+    // misc tab buttons
+    static huntAll() {
+        gamePage.village.huntAll();
+    }
+    /**
+     * Praises the sun in the Religion Tab
+     *
+     * Converts faith to total pool
+     */
+    static praise() {
+        gamePage.religionTab.praiseBtn.onClick();
+    }
+    // resources
     static getResource(resourceName) {
         return gamePage.resPool.resourceMap[resourceName];
     }
     static getResourcePerTick(resourceName) {
         return gamePage.getResourcePerTick(resourceName, true);
     }
-    static craft(resourceName, amount) {
+    static craft(resourceName, amount = 1) {
         gamePage.craft(resourceName, amount);
     }
     static isFull(resourceName) {
@@ -46,6 +62,7 @@ class Game {
         $('a.tab:contains("' + Game.prevTab + '")')[0].click();
         Game.prevTab = null;
     }
+    // jobs
     static get freeKittens() {
         return gamePage.village.getFreeKittens();
     }

@@ -64,6 +64,7 @@ interface GamePage {
     tabs: Tab[];
     libraryTab: Tab;
     workshopTab: Tab;
+    religionTab: Tab & { praiseBtn: any };
 
     bld: {
         get(buildingName: BuildingName): Building;
@@ -99,6 +100,26 @@ class Game {
         return gamePage.workshopTab;
     }
 
+    static get ReligionTab() {
+        return gamePage.religionTab;
+    }
+
+    // misc tab buttons
+    static huntAll() {
+        gamePage.village.huntAll();
+    }
+
+    /**
+     * Praises the sun in the Religion Tab
+     *
+     * Converts faith to total pool
+     */
+    static praise() {
+        gamePage.religionTab.praiseBtn.onClick();
+    }
+
+    // resources
+
     static getResource(resourceName: ResourceName): Resource {
         return gamePage.resPool.resourceMap[resourceName];
     }
@@ -107,7 +128,7 @@ class Game {
         return gamePage.getResourcePerTick(resourceName, true);
     }
 
-    static craft(resourceName: ResourceName, amount: number) {
+    static craft(resourceName: ResourceName, amount: number = 1) {
         gamePage.craft(resourceName, amount);
     }
 
@@ -137,6 +158,8 @@ class Game {
         return true;
     }
 
+    // selecting tabs
+
     static prevTab: string;
 
     static pushTab(tabLabel: string) {
@@ -149,12 +172,16 @@ class Game {
         Game.prevTab = null;
     }
 
+    // jobs
+
     static get freeKittens() {
         return gamePage.village.getFreeKittens();
     }
+
     static getJob(jobName: JobName): Job {
         return gamePage.village.getJob(jobName);
     }
+
     static assignJob(job: Job): boolean {
         if (job.unlocked) {
             gamePage.village.assignJob(job);
@@ -163,6 +190,7 @@ class Game {
 
         return false;
     }
+
     static unassignJob(job: Job) {
         if (job.unlocked) {
             gamePage.village.sim.removeJob(job.name);

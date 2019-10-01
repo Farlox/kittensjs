@@ -9,7 +9,7 @@ interface BuildDef {
 
 interface CraftDef {
     refined: ResourceName;
-    refinedAmount: number;
+    refinedAmount?: number;
     shouldCraft: (needs: Map<ResourceName, number>) => boolean;
 }
 
@@ -20,8 +20,14 @@ let tick = () => {
         console.log('KAI: Observed the sky');
     }
 
+    // praise
+    if (Game.isFull('faith')) {
+        Game.praise();
+    }
+
     // bonfire
     const academy = getButton('Academy');
+    const amphitheatre = getButton('Amphitheatre');
     const aqueduct = getButton('Aqueduct');
     const barn = getButton('Barn');
     const field = getButton('Catnip field');
@@ -32,6 +38,7 @@ let tick = () => {
     const mine = getButton('Mine');
     const pasture = getButton('Pasture');
     const smelter = getButton('Smelter');
+    const temple = getButton('Temple');
     const tradepost = getButton('Tradepost');
     const unicornPasture = getButton('Unic. Pasture');
     const warehouse = getButton('Warehouse');
@@ -46,6 +53,8 @@ let tick = () => {
         { button: library },
         { button: academy },
         { button: mine },
+        { button: amphitheatre },
+        { button: temple },
         { button: tradepost },
         { button: hut, prereq: Game.isSpringSummer },
         { button: logHouse, prereq: Game.isSpringSummer },
@@ -63,29 +72,30 @@ let tick = () => {
 
     const craftQueue: CraftDef[] = [
         { refined: 'wood', refinedAmount: 10, shouldCraft: () => Game.isFull('catnip') },
-        {
-            refined: 'beam',
-            refinedAmount: 1,
-            shouldCraft: () => Game.getResource('wood').value - 175 > Game.getResource('beam').value,
-        },
+        { refined: 'beam', shouldCraft: () => Game.isFull('wood') },
         {
             refined: 'scaffold',
-            refinedAmount: 1,
             shouldCraft: () => Game.getResource('beam').value - 50 > Game.getResource('scaffold').value,
         },
-        { refined: 'slab', refinedAmount: 1, shouldCraft: () => Game.isFull('minerals') },
-        { refined: 'plate', refinedAmount: 1, shouldCraft: () => Game.isFull('iron') },
+        { refined: 'slab', shouldCraft: () => Game.isFull('minerals') },
+        { refined: 'plate', shouldCraft: () => Game.isFull('iron') },
         {
             refined: 'steel',
-            refinedAmount: 1,
             shouldCraft: () =>
                 Game.getResource('coal').value - 100 > Game.getResource('steel').value &&
                 Game.getResource('iron').value - 100 > Game.getResource('steel').value,
         },
         {
             refined: 'gear',
-            refinedAmount: 1,
+
             shouldCraft: () => Game.getResource('steel').value - 15 > Game.getResource('gear').value,
+        },
+        { refined: 'parchment', shouldCraft: () => Game.getResource('furs').value > 175 },
+        {
+            refined: 'manuscript',
+            shouldCraft: () =>
+                Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value &&
+                Game.getResource('culture').value > 400,
         },
     ];
 
@@ -104,8 +114,8 @@ let tick = () => {
                 if (b.model.enabled) {
                     new Action('Science', b).click();
                 } else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value;
-                    if (gap < scienceNeeded) {
+                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
+                    if (gap > 0 && gap < scienceNeeded) {
                         scienceNeeded = Math.min(scienceNeeded, gap);
                     }
                 }
@@ -120,7 +130,7 @@ let tick = () => {
                 if (b.model.enabled) {
                     new Action('Workshop', b).click();
                 } else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value;
+                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
                     if (gap < scienceNeeded) {
                         scienceNeeded = Math.min(scienceNeeded, gap);
                     }
@@ -166,6 +176,9 @@ let tick = () => {
     }
 
     // UI
+    const viewModel = new ViewModel(needs);
+    Game.view.model = viewModel;
+
     if (scienceNeeded < Number.MAX_VALUE) {
         Game.view.msg = `next science in ${scienceNeeded}`;
     }

@@ -7,8 +7,12 @@ let tick = () => {
         $('input#observeBtn').click();
         console.log('KAI: Observed the sky');
     }
+    // praise
+    if (Game.isFull('faith')) {
+    }
     // bonfire
     const academy = getButton('Academy');
+    const amphitheatre = getButton('Amphitheatre');
     const aqueduct = getButton('Aqueduct');
     const barn = getButton('Barn');
     const field = getButton('Catnip field');
@@ -19,6 +23,7 @@ let tick = () => {
     const mine = getButton('Mine');
     const pasture = getButton('Pasture');
     const smelter = getButton('Smelter');
+    const temple = getButton('Temple');
     const tradepost = getButton('Tradepost');
     const unicornPasture = getButton('Unic. Pasture');
     const warehouse = getButton('Warehouse');
@@ -32,6 +37,8 @@ let tick = () => {
         { button: library },
         { button: academy },
         { button: mine },
+        { button: amphitheatre },
+        { button: temple },
         { button: tradepost },
         { button: hut, prereq: Game.isSpringSummer },
         { button: logHouse, prereq: Game.isSpringSummer },
@@ -47,28 +54,27 @@ let tick = () => {
     ];
     const craftQueue = [
         { refined: 'wood', refinedAmount: 10, shouldCraft: () => Game.isFull('catnip') },
-        {
-            refined: 'beam',
-            refinedAmount: 1,
-            shouldCraft: () => Game.getResource('wood').value - 175 > Game.getResource('beam').value,
-        },
+        { refined: 'beam', shouldCraft: () => Game.isFull('wood') },
         {
             refined: 'scaffold',
-            refinedAmount: 1,
             shouldCraft: () => Game.getResource('beam').value - 50 > Game.getResource('scaffold').value,
         },
-        { refined: 'slab', refinedAmount: 1, shouldCraft: () => Game.isFull('minerals') },
-        { refined: 'plate', refinedAmount: 1, shouldCraft: () => Game.isFull('iron') },
+        { refined: 'slab', shouldCraft: () => Game.isFull('minerals') },
+        { refined: 'plate', shouldCraft: () => Game.isFull('iron') },
         {
             refined: 'steel',
-            refinedAmount: 1,
             shouldCraft: () => Game.getResource('coal').value - 100 > Game.getResource('steel').value &&
                 Game.getResource('iron').value - 100 > Game.getResource('steel').value,
         },
         {
             refined: 'gear',
-            refinedAmount: 1,
             shouldCraft: () => Game.getResource('steel').value - 15 > Game.getResource('gear').value,
+        },
+        { refined: 'parchment', shouldCraft: () => Game.getResource('furs').value > 175 },
+        {
+            refined: 'manuscript',
+            shouldCraft: () => Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value &&
+                Game.getResource('culture').value > 400,
         },
     ];
     for (const b of buildQueue) {
@@ -85,8 +91,8 @@ let tick = () => {
                     new Action('Science', b).click();
                 }
                 else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value;
-                    if (gap < scienceNeeded) {
+                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
+                    if (gap > 0 && gap < scienceNeeded) {
                         scienceNeeded = Math.min(scienceNeeded, gap);
                     }
                 }
@@ -101,7 +107,7 @@ let tick = () => {
                     new Action('Workshop', b).click();
                 }
                 else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value;
+                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
                     if (gap < scienceNeeded) {
                         scienceNeeded = Math.min(scienceNeeded, gap);
                     }
@@ -109,10 +115,29 @@ let tick = () => {
             }
         }
     }
+    // needs calc
+    const needs = Game.BonfireTab.buttons
+        .filter(b => b.model.visible && b.model.visible && !b.model.resourceIsLimited)
+        .map(b => b.model.prices)
+        .reduce((flat, next) => {
+        return flat.concat(next);
+    }, [])
+        .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), new Map());
+    // craft
+    for (const c of craftQueue) {
+        if (Game.getResource(c.refined).unlocked && c.shouldCraft(needs)) {
+            console.log(`KAI: crafting ${c.refined}`);
+            Game.craft(c.refined, c.refinedAmount);
+        }
+    }
     // hunt
     if (Game.isFull('manpower')) {
         console.log('KAI: hunting');
         gamePage.village.huntAll();
+    }
+    // praise
+    if (Game.isFull('faith')) {
+        Game.praise();
     }
     // jobs
     if (scienceNeeded === Number.MAX_VALUE) {
@@ -122,23 +147,9 @@ let tick = () => {
             Game.unassignJob(s);
         }
     }
-    // craft
-    for (const c of craftQueue) {
-        if (Game.getResource(c.refined).unlocked && c.shouldCraft()) {
-            console.log(`KAI: crafting ${c.refined}`);
-            Game.craft(c.refined, c.refinedAmount);
-        }
-    }
-    // needs calc
-    let needs = new Map();
-    needs = Game.BonfireTab.buttons
-        .filter(b => b.model.visible && b.model.visible && !b.model.resourceIsLimited)
-        .map(b => b.model.prices)
-        .reduce((flat, next) => {
-        return flat.concat(next);
-    }, [])
-        .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     // UI
+    const viewModel = new ViewModel(needs);
+    Game.view.model = viewModel;
     if (scienceNeeded < Number.MAX_VALUE) {
         Game.view.msg = `next science in ${scienceNeeded}`;
     }
