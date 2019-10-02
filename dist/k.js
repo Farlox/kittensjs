@@ -175,6 +175,7 @@ let tick = () => {
     }
     // praise
     if (Game.isFull('faith')) {
+        Game.praise();
     }
     // bonfire
     const academy = getButton('Academy');
@@ -182,11 +183,13 @@ let tick = () => {
     const aqueduct = getButton('Aqueduct');
     const barn = getButton('Barn');
     const field = getButton('Catnip field');
+    const harbour = getButton('Harbour');
     const hut = getButton('Hut');
     const library = getButton('Library');
     const logHouse = getButton('Log House');
     const lumberMill = getButton('Lumber Mill');
     const mine = getButton('Mine');
+    const observatory = getButton('Observatory');
     const pasture = getButton('Pasture');
     const smelter = getButton('Smelter');
     const temple = getButton('Temple');
@@ -202,6 +205,7 @@ let tick = () => {
         { button: lumberMill },
         { button: library },
         { button: academy },
+        { button: observatory },
         { button: mine },
         { button: amphitheatre },
         { button: temple },
@@ -217,6 +221,7 @@ let tick = () => {
         { button: workshop },
         { button: barn },
         { button: warehouse },
+        { button: harbour },
     ];
     const craftQueue = [
         { refined: 'wood', refinedAmount: 10, shouldCraft: () => Game.isFull('catnip') },
@@ -301,18 +306,14 @@ let tick = () => {
         console.log('KAI: hunting');
         gamePage.village.huntAll();
     }
-    // praise
-    if (Game.isFull('faith')) {
-        Game.praise();
-    }
     // jobs
-    if (scienceNeeded === Number.MAX_VALUE) {
-        // remove scholars
-        const s = Game.getJob('scholar');
-        if (s.unlocked && s.value > 0) {
-            Game.unassignJob(s);
-        }
-    }
+    // if (scienceNeeded === Number.MAX_VALUE) {
+    //     // remove scholars
+    //     const s = Game.getJob('scholar');
+    //     if (s.unlocked && s.value > 0) {
+    //         Game.unassignJob(s);
+    //     }
+    // }
     // UI
     const viewModel = new ViewModel(needs);
     Game.view.model = viewModel;
