@@ -32,6 +32,16 @@ interface Resource {
     maxValue: number;
 }
 
+interface Craft {
+    description: string;
+    isLimited: boolean;
+    label: string;
+    name: string;
+    prices: Price[];
+    unlocked: boolean;
+    value: 0;
+}
+
 interface Building {
     label: string;
     name: string;
@@ -70,9 +80,13 @@ interface GamePage {
         get(buildingName: BuildingName): Building;
     };
 
+    workshop: {
+        getCraft(resourceName: ResourceName): Craft;
+    };
+
     village: {
         getJob(jobName: JobName);
-        assignJob(job: Job);
+        assignJob(job: Job, amt: number);
         getFreeKittens(): number;
         sim: {
             removeJob(jobName: JobName);
@@ -126,6 +140,10 @@ class Game {
 
     static getResourcePerTick(resourceName: ResourceName): number {
         return gamePage.getResourcePerTick(resourceName, true);
+    }
+
+    static getCraft(resourceName: ResourceName): Craft {
+        return gamePage.workshop.getCraft(resourceName);
     }
 
     static craft(resourceName: ResourceName, amount: number = 1) {
@@ -182,9 +200,9 @@ class Game {
         return gamePage.village.getJob(jobName);
     }
 
-    static assignJob(job: Job): boolean {
+    static assignJob(job: Job, amount: number = 1): boolean {
         if (job.unlocked) {
-            gamePage.village.assignJob(job);
+            gamePage.village.assignJob(job, amount);
             return true;
         }
 

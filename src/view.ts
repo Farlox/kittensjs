@@ -13,12 +13,12 @@ class ViewModel {
     private getRatio = (res: ResourceName, needs: Map<ResourceName, number>) =>
         needs.get(res) ? (needs.get(res) / this.totalNeeded) * 100 : 0;
 
-    public totalNeeded: number;
-    public wood: number;
-    public minerals: number;
-    public coal: number;
-    public manpower: number;
-    public science: number;
+    public readonly totalNeeded: number;
+    public readonly wood: number;
+    public readonly minerals: number;
+    public readonly coal: number;
+    public readonly manpower: number;
+    public readonly science: number;
 }
 
 class View {

@@ -30,6 +30,9 @@ class Game {
     static getResourcePerTick(resourceName) {
         return gamePage.getResourcePerTick(resourceName, true);
     }
+    static getCraft(resourceName) {
+        return gamePage.workshop.getCraft(resourceName);
+    }
     static craft(resourceName, amount = 1) {
         gamePage.craft(resourceName, amount);
     }
@@ -69,9 +72,9 @@ class Game {
     static getJob(jobName) {
         return gamePage.village.getJob(jobName);
     }
-    static assignJob(job) {
+    static assignJob(job, amount = 1) {
         if (job.unlocked) {
-            gamePage.village.assignJob(job);
+            gamePage.village.assignJob(job, amount);
             return true;
         }
         return false;
@@ -164,6 +167,11 @@ class View {
         $('#k-science').css('width', model.science);
     }
 }
+// trade ship
+// first craft
+// jobs
+// buttons on other tabs not clicking
+// praise onclick breaks if religion tab isn't clicked once this session
 const getButton = (label) => {
     return Game.BonfireTab.buttons.find(b => b.opts.name === label);
 };
@@ -182,15 +190,19 @@ let tick = () => {
     const amphitheatre = getButton('Amphitheatre');
     const aqueduct = getButton('Aqueduct');
     const barn = getButton('Barn');
+    const calciner = getButton('Calciner');
     const field = getButton('Catnip field');
     const harbour = getButton('Harbour');
     const hut = getButton('Hut');
     const library = getButton('Library');
     const logHouse = getButton('Log House');
     const lumberMill = getButton('Lumber Mill');
+    const mansion = getButton('Mansion');
     const mine = getButton('Mine');
     const observatory = getButton('Observatory');
+    const oilWell = getButton('Oil Well');
     const pasture = getButton('Pasture');
+    const quarry = getButton('Quarry');
     const smelter = getButton('Smelter');
     const temple = getButton('Temple');
     const tradepost = getButton('Tradepost');
@@ -207,11 +219,18 @@ let tick = () => {
         { button: academy },
         { button: observatory },
         { button: mine },
+        { button: quarry },
+        { button: oilWell },
+        {
+            button: calciner,
+            prereq: () => Game.getResourcePerTick('minerals') > 1.5 && Game.getResourcePerTick('oil') > 0.02,
+        },
         { button: amphitheatre },
         { button: temple },
         { button: tradepost },
         { button: hut, prereq: Game.isSpringSummer },
         { button: logHouse, prereq: Game.isSpringSummer },
+        { button: mansion, prereq: Game.isSpringSummer },
         {
             button: smelter,
             prereq: () => Game.getResourcePerTick('wood') > 0.05 &&
@@ -241,15 +260,39 @@ let tick = () => {
             refined: 'gear',
             shouldCraft: () => Game.getResource('steel').value - 15 > Game.getResource('gear').value,
         },
+        {
+            refined: 'concrate',
+            shouldCraft: () => Game.getResource('slab').value - 2500 > Game.getResource('concrate').value &&
+                Game.getResource('steel').value - 25 > Game.getResource('concrate').value,
+        },
         { refined: 'parchment', shouldCraft: () => Game.getResource('furs').value > 175 },
         {
             refined: 'manuscript',
             shouldCraft: () => Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value &&
                 Game.getResource('culture').value > 400,
         },
+        {
+            refined: 'compedium',
+            shouldCraft: () => Game.getResource('manuscript').value - 50 > Game.getResource('compedium').value &&
+                Game.getResource('science').value > 10000,
+        },
+        {
+            refined: 'blueprint',
+            shouldCraft: () => Game.getResource('compedium').value - 25 > Game.getResource('blueprint').value &&
+                Game.getResource('science').value > 25000,
+        },
+        {
+            // 0.35% chance for titanium during zebra trade per trade ship, 100% @ 285
+            refined: 'ship',
+            shouldCraft: needs => Game.getResource('ship').value < 285 && needs.get('titanium') > 0,
+        },
+        {
+            refined: 'alloy',
+            shouldCraft: () => Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
+        },
     ];
     for (const b of buildQueue) {
-        if (b.button.model.enabled && (b.prereq === undefined || b.prereq())) {
+        if (b.button && b.button.model.enabled && (b.prereq === undefined || b.prereq())) {
             new Action('Bonfire', b.button).click();
         }
     }
@@ -296,7 +339,9 @@ let tick = () => {
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), new Map());
     // craft
     for (const c of craftQueue) {
-        if (Game.getResource(c.refined).unlocked && c.shouldCraft(needs)) {
+        if (Game.getResource(c.refined).unlocked &&
+            c.shouldCraft(needs) &&
+            Game.canAfford(Game.getCraft(c.refined).prices)) {
             console.log(`KAI: crafting ${c.refined}`);
             Game.craft(c.refined, c.refinedAmount);
         }
@@ -307,6 +352,24 @@ let tick = () => {
         gamePage.village.huntAll();
     }
     // jobs
+    if (Game.freeKittens > 0) {
+        const list = [
+            { res: 'wood', job: Game.getJob('woodcutter') },
+            { res: 'minerals', job: Game.getJob('miner') },
+            { res: 'science', job: Game.getJob('scholar') },
+        ];
+        const ratios = list
+            .filter(r => needs.get(r.res))
+            .map(r => ({
+            name: r.res,
+            job: r.job,
+            ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
+        }));
+        ratios.sort((a, b) => a.ratio - b.ratio);
+        console.log(`KAI: assigning ${ratios[0].job.title}`);
+        Game.assignJob(ratios[0].job);
+        console.log(`KAI: would unassign ${ratios[ratios.length - 1].job.title}`);
+    }
     // if (scienceNeeded === Number.MAX_VALUE) {
     //     // remove scholars
     //     const s = Game.getJob('scholar');
@@ -317,9 +380,9 @@ let tick = () => {
     // UI
     const viewModel = new ViewModel(needs);
     Game.view.model = viewModel;
-    if (scienceNeeded < Number.MAX_VALUE) {
-        Game.view.msg = `next science in ${scienceNeeded}`;
-    }
+    // if (scienceNeeded < Number.MAX_VALUE) {
+    //     Game.view.msg = `next science in ${scienceNeeded}`;
+    // }
 };
 // run
 if (!Game.view) {
