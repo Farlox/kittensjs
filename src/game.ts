@@ -3,6 +3,7 @@ interface Button {
         enabled: boolean;
         prices: Price[];
         resourceIsLimited: boolean;
+        visible: boolean;
         [key: string]: any;
     };
 

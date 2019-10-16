@@ -28,12 +28,19 @@ class View {
         const left = $('#leftColumnViewport');
 
         this.panel = $(
-            "<div id='kcode'><div id='mode' /><div id='k-options'>" +
+            "<div id='kcode'>" +
+                // "<div id='mode' /><div id='k-options'>" +
                 // "<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
                 // "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
                 // "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
-                "</div><div id='k-msg' /><div id='k-bld' />" +
-                "<div id='k-needs'><div id='k-wood' class='bar'>wood</div><div id='k-minerals' class='bar'>minerals</div><div id='k-coal' class='bar'>coal</div><div id='k-catpower' class='bar'>catpower</div><div id='k-science' class='bar'>science</div></div>" +
+                // "</div>" +
+                "<div id='k-msg' /><div id='k-bld' />" +
+                "<div id='k-needs'>" +
+                "<div id='k-wood' class='bar'>wood</div>" +
+                "<div id='k-minerals' class='bar'>minerals</div>" +
+                "<div id='k-science' class='bar'>science</div></div>" +
+                "<div id='k-coal' class='bar'>coal</div>" +
+                "<div id='k-catpower' class='bar'>catpower</div>" +
                 '</div>'
         );
 

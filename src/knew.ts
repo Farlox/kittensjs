@@ -160,6 +160,7 @@ let tick = () => {
         for (const b of Game.ScienceTab.buttons) {
             if (b.model.visible) {
                 if (b.model.enabled) {
+                    console.log(`**science ready : ${b.opts.name}`);
                     new Action('Science', b).click();
                 } else if (!b.model.resourceIsLimited) {
                     const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
@@ -189,15 +190,33 @@ let tick = () => {
 
     // needs calc
     const needs = Game.BonfireTab.buttons
-        .filter(b => b.model.visible && b.model.visible && !b.model.resourceIsLimited)
+        .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
-        .reduce((flat, next) => {
-            return flat.concat(next);
-        }, [])
+        .reduce((flat, next) => flat.concat(next), [])
         .reduce(
             (needs, price) =>
                 needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val),
             new Map<ResourceName, number>()
+        );
+
+    Game.ScienceTab.buttons
+        .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
+        .map(b => b.model.prices)
+        .reduce((flat, next) => flat.concat(next), [])
+        .reduce(
+            (needs, price) =>
+                needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val),
+            needs
+        );
+
+    Game.WorkshopTab.buttons
+        .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
+        .map(b => b.model.prices)
+        .reduce((flat, next) => flat.concat(next), [])
+        .reduce(
+            (needs, price) =>
+                needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val),
+            needs
         );
 
     // craft
@@ -219,24 +238,29 @@ let tick = () => {
     }
 
     // jobs
-    if (Game.freeKittens > 0) {
-        const list: { res: ResourceName; job: Job }[] = [
-            { res: 'wood', job: Game.getJob('woodcutter') },
-            { res: 'minerals', job: Game.getJob('miner') },
-            { res: 'science', job: Game.getJob('scholar') },
-        ];
-        const ratios = list
-            .filter(r => needs.get(r.res))
-            .map(r => ({
-                name: r.res,
-                job: r.job,
-                ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
-            }));
-        ratios.sort((a, b) => a.ratio - b.ratio);
+    const list: { res: ResourceName; job: Job }[] = [
+        { res: 'wood', job: Game.getJob('woodcutter') },
+        { res: 'minerals', job: Game.getJob('miner') },
+        { res: 'science', job: Game.getJob('scholar') },
+    ];
+    const ratios = list
+        .filter(r => needs.get(r.res))
+        .map(r => ({
+            name: r.res,
+            job: r.job,
+            ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
+        }))
+        .sort((a, b) => a.ratio - b.ratio);
 
+    if (Game.freeKittens > 0 && ratios.length > 1) {
         console.log(`KAI: assigning ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);
         console.log(`KAI: would unassign ${ratios[ratios.length - 1].job.title}`);
+    } else if (Game.isSpringSummer() === true && Game.getResourcePerTick('catnip') <= 0 && ratios.length > 0) {
+        const unJob = ratios[ratios.length - 1].job;
+        console.log(`KAI: Job - need food, swapped ${unJob.title} to farmer`);
+        Game.unassignJob(unJob);
+        Game.assignJob(Game.getJob('farmer'));
     }
 
     // if (scienceNeeded === Number.MAX_VALUE) {
