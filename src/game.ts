@@ -1,9 +1,11 @@
-interface Button {
+interface Button<T> {
     model: {
         enabled: boolean;
         prices: Price[];
         resourceIsLimited: boolean;
         visible: boolean;
+        metadata: T;
+
         [key: string]: any;
     };
 
@@ -20,9 +22,9 @@ interface Price {
     val: number;
 }
 
-interface Tab {
+interface Tab<T> {
     visible: boolean;
-    buttons: Button[];
+    buttons: Button<T>[];
 }
 
 interface Resource {
@@ -38,7 +40,7 @@ interface Craft {
     description: string;
     isLimited: boolean;
     label: string;
-    name: string;
+    name: ResourceName;
     prices: Price[];
     unlocked: boolean;
     value: 0;
@@ -46,12 +48,28 @@ interface Craft {
 
 interface Building {
     label: string;
-    name: string;
+    name: BuildingName;
     // on: number;
     prices: Price[];
     unlockable: boolean;
     unlocked: boolean;
     val: number;
+}
+
+interface Upgrade {
+    name: string;
+    label: string;
+    prices: Price[];
+    researched: boolean;
+    unlocked: boolean;
+}
+
+interface Tech {
+    name: string;
+    label: string;
+    prices: Price[];
+    researched: boolean;
+    unlocked: boolean;
 }
 
 interface Job {
@@ -79,10 +97,10 @@ interface GamePage {
 
     craft: (resName: ResourceName, value: number) => void;
 
-    tabs: Tab[];
-    libraryTab: Tab;
-    workshopTab: Tab;
-    religionTab: Tab & { praiseBtn: any };
+    tabs: Tab<any>[];
+    libraryTab: Tab<Tech>;
+    workshopTab: Tab<Upgrade>;
+    religionTab: Tab<any> & { praiseBtn: any };
 
     bld: {
         get(buildingName: BuildingName): Building;

@@ -123,7 +123,7 @@ class Action {
                 if (res.value < price.val) {
                     this._gap.push({
                         name: price.name,
-                        val: price.val - res.value
+                        val: price.val - res.value,
                     });
                 }
             }
@@ -190,11 +190,10 @@ class View {
         $('#k-science').css('width', model.science);
     }
 }
-// trade ship
-// first craft
 // jobs
 // buttons on other tabs not clicking
 // praise onclick breaks if religion tab isn't clicked once this session
+// smelter built too early and kills production
 const getButton = (label) => {
     return Game.BonfireTab.buttons.find(b => b.opts.name === label);
 };
@@ -260,8 +259,9 @@ let tick = () => {
         { button: mansion, prereq: Game.isSpringSummer },
         {
             button: smelter,
-            prereq: () => Game.getResourcePerTick('wood') > 0.05 &&
-                Game.getResourcePerTick('minerals') > 0.1 &&
+            // building smelters too early kills wood and mineral production. floors are set to 10x price
+            prereq: () => Game.getResourcePerTick('wood') > 0.5 &&
+                Game.getResourcePerTick('minerals') > 1.0 &&
                 Game.getResourcePerTick('minerals') > Game.getResourcePerTick('iron'),
         },
         { button: workshop },
@@ -324,41 +324,18 @@ let tick = () => {
         }
     }
     // science
-    let scienceNeeded = Number.MAX_VALUE;
     if (Game.ScienceTab.visible) {
-        for (const b of Game.ScienceTab.buttons) {
-            if (b.model.visible) {
-                if (Game.canAfford(b.model.prices)) {
-                    console.log(`** science affordable : ${b.opts.id}`);
-                }
-                if (b.model.enabled) {
-                    console.log(`**science ready : ${b.opts.id}`);
-                    new Action('Science', b).click();
-                }
-                else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
-                    if (gap > 0 && gap < scienceNeeded) {
-                        scienceNeeded = Math.min(scienceNeeded, gap);
-                    }
-                }
-            }
-        }
+        Game.ScienceTab.buttons
+            .filter(b => b.model.metadata.unlocked && !b.model.metadata.researched && Game.canAfford(b.model.prices))
+            .map(b => new Action('Science', b))
+            .forEach(a => a.click());
     }
     // workshop
     if (Game.WorkshopTab.visible) {
-        for (const b of Game.WorkshopTab.buttons) {
-            if (b.model.visible) {
-                if (b.model.enabled) {
-                    new Action('Workshop', b).click();
-                }
-                else if (!b.model.resourceIsLimited) {
-                    const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
-                    if (gap < scienceNeeded) {
-                        scienceNeeded = Math.min(scienceNeeded, gap);
-                    }
-                }
-            }
-        }
+        Game.WorkshopTab.buttons
+            .filter(b => b.model.metadata.unlocked && !b.model.metadata.researched && Game.canAfford(b.model.prices))
+            .map(b => new Action('Workshop', b))
+            .forEach(a => a.click());
     }
     // needs calc
     const needs = Game.BonfireTab.buttons
@@ -377,16 +354,14 @@ let tick = () => {
         .reduce((flat, next) => flat.concat(next), [])
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     // craft
-    for (const c of craftQueue) {
-        const refined = Game.getResource(c.refined);
-        if (refined.visible &&
-            refined.craftable &&
-            c.shouldCraft(needs) &&
-            Game.canAfford(Game.getCraft(c.refined).prices)) {
-            console.log(`KAI: crafting ${c.refined}`);
-            Game.craft(c.refined, c.refinedAmount);
-        }
-    }
+    craftQueue
+        .filter(c => c.shouldCraft(needs))
+        .map(c => Game.getCraft(c.refined))
+        .filter(c => c.unlocked && Game.canAfford(c.prices))
+        .forEach(c => {
+        console.log(`KAI: crafting ${c.name}`);
+        Game.craft(c.name, 1);
+    });
     // hunt
     if (Game.isFull('manpower')) {
         console.log('KAI: hunting');
@@ -407,7 +382,7 @@ let tick = () => {
     }))
         .sort((a, b) => a.ratio - b.ratio);
     Game.view.jobRatios = ratios;
-    if (Game.freeKittens > 0 && ratios.length > 1) {
+    if (Game.freeKittens > 0 && ratios.length > 0) {
         console.log(`KAI: assigning ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);
         console.log(`KAI: would unassign ${ratios[ratios.length - 1].job.title}`);
@@ -418,19 +393,9 @@ let tick = () => {
         Game.unassignJob(unJob);
         Game.assignJob(Game.getJob('farmer'));
     }
-    // if (scienceNeeded === Number.MAX_VALUE) {
-    //     // remove scholars
-    //     const s = Game.getJob('scholar');
-    //     if (s.unlocked && s.value > 0) {
-    //         Game.unassignJob(s);
-    //     }
-    // }
     // UI
     const viewModel = new ViewModel(needs);
     Game.view.model = viewModel;
-    // if (scienceNeeded < Number.MAX_VALUE) {
-    //     Game.view.msg = `next science in ${scienceNeeded}`;
-    // }
 };
 // run
 if (!Game.view) {

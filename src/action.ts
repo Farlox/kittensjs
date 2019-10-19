@@ -1,6 +1,6 @@
 class Action {
     private tabName: TabName;
-    private button: any;
+    private button: Button<any>;
 
     get name(): string {
         return this.button.model.metadata ? this.button.model.metadata.name : this.button.buttonContent.innerText;
@@ -12,7 +12,7 @@ class Action {
     private _gap: Price[] = null;
     private _time: number = null;
 
-    constructor(tabName: TabName, button: Button) {
+    constructor(tabName: TabName, button: Button<any>) {
         this.tabName = tabName;
         this.button = button;
     }
@@ -41,7 +41,7 @@ class Action {
                 if (res.value < price.val) {
                     this._gap.push({
                         name: price.name,
-                        val: price.val - res.value
+                        val: price.val - res.value,
                     });
                 }
             }
