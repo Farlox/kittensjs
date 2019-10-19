@@ -70,7 +70,9 @@ class View {
     }
 
     public set jobRatios(ratios: JobRatio[]) {
-        this.msg = ratios.map(q => `${q.job.name} ${q.ratio.toExponential(1)}`).join('<br/>');
+        this.msg = ratios
+            .map((jr, i, a) => `${(jr.ratio / a[a.length - 1].ratio).toFixed(2)} ${jr.job.name}`)
+            .join('<br/>');
     }
 
     public set model(model: ViewModel) {

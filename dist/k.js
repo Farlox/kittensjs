@@ -180,7 +180,9 @@ class View {
         return toggle && toggle.checked;
     }
     set jobRatios(ratios) {
-        this.msg = ratios.map(q => `${q.job.name} ${q.ratio.toExponential(1)}`).join('<br/>');
+        this.msg = ratios
+            .map((r, i, a) => `${(r.ratio / a[a.length - 1].ratio).toFixed(2)} ${r.job.name}`)
+            .join('<br/>');
     }
     set model(model) {
         $('#k-wood').css('width', model.wood);
@@ -193,7 +195,6 @@ class View {
 // jobs
 // buttons on other tabs not clicking
 // praise onclick breaks if religion tab isn't clicked once this session
-// smelter built too early and kills production
 const getButton = (label) => {
     return Game.BonfireTab.buttons.find(b => b.opts.name === label);
 };
