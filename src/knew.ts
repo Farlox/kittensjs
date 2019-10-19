@@ -1,5 +1,3 @@
-// trade ship
-// first craft
 // jobs
 // buttons on other tabs not clicking
 // praise onclick breaks if religion tab isn't clicked once this session
@@ -229,8 +227,10 @@ let tick = () => {
 
     // craft
     for (const c of craftQueue) {
+        const refined = Game.getResource(c.refined);
         if (
-            Game.getResource(c.refined).unlocked &&
+            refined.visible &&
+            refined.craftable &&
             c.shouldCraft(needs) &&
             Game.canAfford(Game.getCraft(c.refined).prices)
         ) {

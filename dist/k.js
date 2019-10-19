@@ -378,7 +378,9 @@ let tick = () => {
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     // craft
     for (const c of craftQueue) {
-        if (Game.getResource(c.refined).unlocked &&
+        const refined = Game.getResource(c.refined);
+        if (refined.visible &&
+            refined.craftable &&
             c.shouldCraft(needs) &&
             Game.canAfford(Game.getCraft(c.refined).prices)) {
             console.log(`KAI: crafting ${c.refined}`);

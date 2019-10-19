@@ -27,6 +27,7 @@ interface Tab {
 
 interface Resource {
     name: string;
+    visible: boolean;
     craftable: boolean;
     unlocked: boolean;
     value: number;
