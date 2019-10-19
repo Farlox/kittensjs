@@ -21,7 +21,13 @@ class Game {
      * Converts faith to total pool
      */
     static praise() {
-        gamePage.religionTab.praiseBtn.onClick();
+        if (gamePage.religionTab.praiseBtn) {
+            gamePage.religionTab.praiseBtn.onClick();
+        }
+        else {
+            Game.pushTab('Religion');
+            Game.popTab();
+        }
     }
     // resources
     static getResource(resourceName) {
@@ -141,11 +147,13 @@ class View {
     constructor() {
         const left = $('#leftColumnViewport');
         this.panel = $("<div id='kcode'>" +
-            // "<div id='mode' /><div id='k-options'>" +
+            // "<div id='mode' />
+            "<div id='k-options'>" +
+            "<input id='k-master-toggle' name='k-master-toggle' type='checkbox' checked='true' /><label for='k-master-toggle'>master switch</label><br/>" +
             // "<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
             // "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
             // "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
-            // "</div>" +
+            '</div>' +
             "<div id='k-msg' /><div id='k-bld' />" +
             "<div id='k-needs'>" +
             "<div id='k-wood' class='bar'>wood</div>" +
@@ -160,11 +168,19 @@ class View {
             '#kcode #k-options { margin-top: 5px; }' +
             '#kcode #k-bld { margin-top: 5px; color: #808080; }' +
             '#kcode #k-needs .bar { background-color:#ccc; color:#333 }' +
+            '.craftTable { padding-bottom: 0 !important }' +
             '</style>');
         left.append(this.panel);
     }
     set msg(msg) {
         $('#k-msg').html(msg);
+    }
+    get masterEnabled() {
+        const toggle = $('#k-master-toggle')[0];
+        return toggle && toggle.checked;
+    }
+    set jobRatios(ratios) {
+        this.msg = ratios.map(q => `${q.job.name} ${q.ratio.toExponential(1)}`).join('<br/>');
     }
     set model(model) {
         $('#k-wood').css('width', model.wood);
@@ -187,6 +203,10 @@ let tick = () => {
     if ($('input#observeBtn').length == 1) {
         $('input#observeBtn').click();
         console.log('KAI: Observed the sky');
+    }
+    if (!Game.view.masterEnabled) {
+        console.log('KAI: disabled');
+        return;
     }
     // praise
     if (Game.isFull('faith')) {
@@ -308,8 +328,11 @@ let tick = () => {
     if (Game.ScienceTab.visible) {
         for (const b of Game.ScienceTab.buttons) {
             if (b.model.visible) {
+                if (Game.canAfford(b.model.prices)) {
+                    console.log(`** science affordable : ${b.opts.id}`);
+                }
                 if (b.model.enabled) {
-                    console.log(`**science ready : ${b.opts.name}`);
+                    console.log(`**science ready : ${b.opts.id}`);
                     new Action('Science', b).click();
                 }
                 else if (!b.model.resourceIsLimited) {
@@ -381,6 +404,7 @@ let tick = () => {
         ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
     }))
         .sort((a, b) => a.ratio - b.ratio);
+    Game.view.jobRatios = ratios;
     if (Game.freeKittens > 0 && ratios.length > 1) {
         console.log(`KAI: assigning ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);

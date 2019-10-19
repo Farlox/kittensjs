@@ -29,11 +29,13 @@ class View {
 
         this.panel = $(
             "<div id='kcode'>" +
-                // "<div id='mode' /><div id='k-options'>" +
+                // "<div id='mode' />
+                "<div id='k-options'>" +
+                "<input id='k-master-toggle' name='k-master-toggle' type='checkbox' checked='true' /><label for='k-master-toggle'>master switch</label><br/>" +
                 // "<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
                 // "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
                 // "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
-                // "</div>" +
+                '</div>' +
                 "<div id='k-msg' /><div id='k-bld' />" +
                 "<div id='k-needs'>" +
                 "<div id='k-wood' class='bar'>wood</div>" +
@@ -51,6 +53,7 @@ class View {
                 '#kcode #k-options { margin-top: 5px; }' +
                 '#kcode #k-bld { margin-top: 5px; color: #808080; }' +
                 '#kcode #k-needs .bar { background-color:#ccc; color:#333 }' +
+                '.craftTable { padding-bottom: 0 !important }' +
                 '</style>'
         );
 
@@ -59,6 +62,15 @@ class View {
 
     public set msg(msg: string) {
         $('#k-msg').html(msg);
+    }
+
+    public get masterEnabled(): boolean {
+        const toggle: HTMLInputElement = $('#k-master-toggle')[0];
+        return toggle && toggle.checked;
+    }
+
+    public set jobRatios(ratios: JobRatio[]) {
+        this.msg = ratios.map(q => `${q.job.name} ${q.ratio.toExponential(1)}`).join('<br/>');
     }
 
     public set model(model: ViewModel) {

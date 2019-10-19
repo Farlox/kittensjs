@@ -62,6 +62,12 @@ interface Job {
     value: number;
 }
 
+interface JobRatio {
+    name: ResourceName;
+    job: Job;
+    ratio: number;
+}
+
 interface GamePage {
     calendar: {
         season: number;
@@ -130,7 +136,12 @@ class Game {
      * Converts faith to total pool
      */
     static praise() {
-        gamePage.religionTab.praiseBtn.onClick();
+        if (gamePage.religionTab.praiseBtn) {
+            gamePage.religionTab.praiseBtn.onClick();
+        } else {
+            Game.pushTab('Religion');
+            Game.popTab();
+        }
     }
 
     // resources

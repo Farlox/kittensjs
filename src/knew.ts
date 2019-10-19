@@ -26,6 +26,11 @@ let tick = () => {
         console.log('KAI: Observed the sky');
     }
 
+    if (!Game.view.masterEnabled) {
+        console.log('KAI: disabled');
+        return;
+    }
+
     // praise
     if (Game.isFull('faith')) {
         Game.praise();
@@ -159,8 +164,11 @@ let tick = () => {
     if (Game.ScienceTab.visible) {
         for (const b of Game.ScienceTab.buttons) {
             if (b.model.visible) {
+                if (Game.canAfford(b.model.prices)) {
+                    console.log(`** science affordable : ${b.opts.id}`);
+                }
                 if (b.model.enabled) {
-                    console.log(`**science ready : ${b.opts.name}`);
+                    console.log(`**science ready : ${b.opts.id}`);
                     new Action('Science', b).click();
                 } else if (!b.model.resourceIsLimited) {
                     const gap = b.model.prices[0].val - Game.getResource('science').value; // TODO: [0] is not science
@@ -243,7 +251,7 @@ let tick = () => {
         { res: 'minerals', job: Game.getJob('miner') },
         { res: 'science', job: Game.getJob('scholar') },
     ];
-    const ratios = list
+    const ratios: JobRatio[] = list
         .filter(r => needs.get(r.res))
         .map(r => ({
             name: r.res,
@@ -251,6 +259,8 @@ let tick = () => {
             ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
         }))
         .sort((a, b) => a.ratio - b.ratio);
+
+    Game.view.jobRatios = ratios;
 
     if (Game.freeKittens > 0 && ratios.length > 1) {
         console.log(`KAI: assigning ${ratios[0].job.title}`);
