@@ -97,3 +97,5 @@ type BuildingName =
     | 'zebraOutpost'
     | 'zebraWorkshop'
     | 'zebraForge';
+
+type RaceName = 'lizards' | 'sharks' | 'griffins' | 'nagas' | 'zebras' | 'spiders' | 'dragons' | 'leviathans';

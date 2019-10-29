@@ -11,15 +11,9 @@ class Game {
     static get ReligionTab() {
         return gamePage.religionTab;
     }
-    // misc tab buttons
     static huntAll() {
         gamePage.village.huntAll();
     }
-    /**
-     * Praises the sun in the Religion Tab
-     *
-     * Converts faith to total pool
-     */
     static praise() {
         if (gamePage.religionTab.praiseBtn) {
             gamePage.religionTab.praiseBtn.onClick();
@@ -29,12 +23,17 @@ class Game {
             Game.popTab();
         }
     }
-    // resources
     static getResource(resourceName) {
         return gamePage.resPool.resourceMap[resourceName];
     }
     static getResourcePerTick(resourceName) {
         return gamePage.getResourcePerTick(resourceName, true);
+    }
+    static getRace(raceName) {
+        return gamePage.diplomacy.get(raceName);
+    }
+    static tradeAll(race) {
+        gamePage.diplomacy.tradeAll(race);
     }
     static getCraft(resourceName) {
         return gamePage.workshop.getCraft(resourceName);
@@ -71,7 +70,6 @@ class Game {
         $('a.tab:contains("' + Game.prevTab + '")')[0].click();
         Game.prevTab = null;
     }
-    // jobs
     static get freeKittens() {
         return gamePage.village.getFreeKittens();
     }
@@ -147,12 +145,8 @@ class View {
     constructor() {
         const left = $('#leftColumnViewport');
         this.panel = $("<div id='kcode'>" +
-            // "<div id='mode' />
             "<div id='k-options'>" +
             "<input id='k-master-toggle' name='k-master-toggle' type='checkbox' checked='true' /><label for='k-master-toggle'>master switch</label><br/>" +
-            // "<input id='k-manuscript-toggle' name='k-manuscript-toggle' type='checkbox' /><label for='k-manuscript-toggle'>make manuscripts</label><br/>" +
-            // "<input id='k-compendium-toggle' name='k-compendium-toggle' type='checkbox' /><label for='k-compendium-toggle'>make compendiums</label><br/>" +
-            // "<input id='k-blueprint-toggle' name='k-blueprint-toggle' type='checkbox' /><label for='k-blueprint-toggle'>make blueprints</label><br/>" +
             '</div>' +
             "<div id='k-msg' /><div id='k-bld' />" +
             "<div id='k-needs'>" +
@@ -181,7 +175,7 @@ class View {
     }
     set jobRatios(ratios) {
         this.msg = ratios
-            .map((r, i, a) => `${(r.ratio / a[a.length - 1].ratio).toFixed(2)} ${r.job.name}`)
+            .map((jr, i, a) => `${(jr.ratio / a[a.length - 1].ratio).toFixed(2)} ${jr.job.name}`)
             .join('<br/>');
     }
     set model(model) {
@@ -192,15 +186,11 @@ class View {
         $('#k-science').css('width', model.science);
     }
 }
-// jobs
-// buttons on other tabs not clicking
-// praise onclick breaks if religion tab isn't clicked once this session
 const getButton = (label) => {
     return Game.BonfireTab.buttons.find(b => b.opts.name === label);
 };
 let tick = () => {
-    // observe the sky
-    if ($('input#observeBtn').length == 1) {
+    if ($('input#observeBtn').length === 1) {
         $('input#observeBtn').click();
         console.log('KAI: Observed the sky');
     }
@@ -208,11 +198,9 @@ let tick = () => {
         console.log('KAI: disabled');
         return;
     }
-    // praise
     if (Game.isFull('faith')) {
         Game.praise();
     }
-    // bonfire
     const academy = getButton('Academy');
     const amphitheatre = getButton('Amphitheatre');
     const aqueduct = getButton('Aqueduct');
@@ -224,6 +212,7 @@ let tick = () => {
     const library = getButton('Library');
     const logHouse = getButton('Log House');
     const lumberMill = getButton('Lumber Mill');
+    const magneto = getButton('Magneto');
     const mansion = getButton('Mansion');
     const mine = getButton('Mine');
     const observatory = getButton('Observatory');
@@ -231,6 +220,7 @@ let tick = () => {
     const pasture = getButton('Pasture');
     const quarry = getButton('Quarry');
     const smelter = getButton('Smelter');
+    const steamworks = getButton('Steamworks');
     const temple = getButton('Temple');
     const tradepost = getButton('Tradepost');
     const unicornPasture = getButton('Unic. Pasture');
@@ -260,11 +250,12 @@ let tick = () => {
         { button: mansion, prereq: Game.isSpringSummer },
         {
             button: smelter,
-            // building smelters too early kills wood and mineral production. floors are set to 10x price
             prereq: () => Game.getResourcePerTick('wood') > 0.5 &&
                 Game.getResourcePerTick('minerals') > 1.0 &&
                 Game.getResourcePerTick('minerals') > Game.getResourcePerTick('iron'),
         },
+        { button: magneto, prereq: () => Game.getResourcePerTick('oil') > 0.05 },
+        { button: steamworks, prereq: () => magneto.model.on > steamworks.model.on },
         { button: workshop },
         { button: barn },
         { button: warehouse },
@@ -310,7 +301,6 @@ let tick = () => {
                 Game.getResource('science').value > 25000,
         },
         {
-            // 0.35% chance for titanium during zebra trade per trade ship, 100% @ 285
             refined: 'ship',
             shouldCraft: needs => Game.getResource('ship').value < 285 && needs.get('titanium') > 0,
         },
@@ -319,74 +309,77 @@ let tick = () => {
             shouldCraft: () => Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
         },
     ];
-    for (const b of buildQueue) {
-        if (b.button && b.button.model.enabled && (b.prereq === undefined || b.prereq())) {
-            new Action('Bonfire', b.button).click();
-        }
-    }
-    // science
+    buildQueue
+        .filter(b => b.button && b.button.model.enabled && (b.prereq === undefined || b.prereq()))
+        .map(b => new Action('Bonfire', b.button))
+        .forEach(a => a.click());
     if (Game.ScienceTab.visible) {
         Game.ScienceTab.buttons
             .filter(b => b.model.metadata.unlocked && !b.model.metadata.researched && Game.canAfford(b.model.prices))
             .map(b => new Action('Science', b))
             .forEach(a => a.click());
     }
-    // workshop
     if (Game.WorkshopTab.visible) {
         Game.WorkshopTab.buttons
             .filter(b => b.model.metadata.unlocked && !b.model.metadata.researched && Game.canAfford(b.model.prices))
             .map(b => new Action('Workshop', b))
             .forEach(a => a.click());
     }
-    // needs calc
     const needs = Game.BonfireTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
+        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), new Map());
     Game.ScienceTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
+        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     Game.WorkshopTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
+        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
-    // craft
     craftQueue
         .filter(c => c.shouldCraft(needs))
         .map(c => Game.getCraft(c.refined))
         .filter(c => c.unlocked && Game.canAfford(c.prices))
         .forEach(c => {
-        console.log(`KAI: crafting ${c.name}`);
         Game.craft(c.name, 1);
     });
-    // hunt
     if (Game.isFull('manpower')) {
+        const zebras = Game.getRace('zebras');
+        if (zebras.unlocked) {
+            console.log('KAI: trading with zebras');
+            Game.tradeAll(zebras);
+        }
         console.log('KAI: hunting');
         gamePage.village.huntAll();
     }
-    // jobs
     const list = [
         { res: 'wood', job: Game.getJob('woodcutter') },
         { res: 'minerals', job: Game.getJob('miner') },
         { res: 'science', job: Game.getJob('scholar') },
     ];
+    const jobNeeds = new Map(needs);
+    jobNeeds.set('wood', needs.get('wood') || 0 + needs.get('beam') || 0 + needs.get('scaffold') || 0);
+    jobNeeds.set('minerals', needs.get('minerals') || 0 + needs.get('slab') || 0 + needs.get('titanium') || 0);
+    jobNeeds.set('science', needs.get('science') || 0 + needs.get('compedium') || 0 + needs.get('manuscript') || 0);
     const ratios = list
-        .filter(r => needs.get(r.res))
+        .filter(r => jobNeeds.get(r.res))
         .map(r => ({
         name: r.res,
         job: r.job,
-        ratio: Game.getResourcePerTick(r.res) / needs.get(r.res),
+        ratio: Game.getResourcePerTick(r.res) / jobNeeds.get(r.res),
     }))
         .sort((a, b) => a.ratio - b.ratio);
     Game.view.jobRatios = ratios;
     if (Game.freeKittens > 0 && ratios.length > 0) {
-        console.log(`KAI: assigning ${ratios[0].job.title}`);
+        console.log(`KAI: Job assigning free to ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);
-        console.log(`KAI: would unassign ${ratios[ratios.length - 1].job.title}`);
     }
     else if (Game.isSpringSummer() === true && Game.getResourcePerTick('catnip') <= 0 && ratios.length > 0) {
         const unJob = ratios[ratios.length - 1].job;
@@ -394,11 +387,16 @@ let tick = () => {
         Game.unassignJob(unJob);
         Game.assignJob(Game.getJob('farmer'));
     }
-    // UI
+    else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.85) {
+        const job = ratios[0].job;
+        const unJob = ratios[ratios.length - 1].job;
+        console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
+        Game.unassignJob(unJob);
+        Game.assignJob(job);
+    }
     const viewModel = new ViewModel(needs);
     Game.view.model = viewModel;
 };
-// run
 if (!Game.view) {
     Game.view = new View();
 }

@@ -5,6 +5,7 @@ interface Button<T> {
         resourceIsLimited: boolean;
         visible: boolean;
         metadata: T;
+        on: number;
 
         [key: string]: any;
     };
@@ -87,6 +88,12 @@ interface JobRatio {
     ratio: number;
 }
 
+interface Race {
+    name: string;
+    Title: string;
+    unlocked: boolean;
+}
+
 interface GamePage {
     calendar: {
         season: number;
@@ -119,6 +126,12 @@ interface GamePage {
         };
 
         huntAll: () => void;
+    };
+
+    diplomacy: {
+        game: any;
+        get(race: RaceName): Race;
+        tradeAll(race: Race): void;
     };
 }
 
@@ -171,6 +184,14 @@ class Game {
 
     static getResourcePerTick(resourceName: ResourceName): number {
         return gamePage.getResourcePerTick(resourceName, true);
+    }
+
+    static getRace(raceName: RaceName): Race {
+        return gamePage.diplomacy.get(raceName);
+    }
+
+    static tradeAll(race: Race): void {
+        gamePage.diplomacy.tradeAll(race);
     }
 
     static getCraft(resourceName: ResourceName): Craft {
