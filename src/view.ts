@@ -40,7 +40,7 @@ class View {
                 "<div id='k-needs'>" +
                 "<div id='k-wood' class='bar'>wood</div>" +
                 "<div id='k-minerals' class='bar'>minerals</div>" +
-                "<div id='k-science' class='bar'>science</div></div>" +
+                "<div id='k-science' class='bar'>science</div>" +
                 "<div id='k-coal' class='bar'>coal</div>" +
                 "<div id='k-catpower' class='bar'>catpower</div>" +
                 '</div>'

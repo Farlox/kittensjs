@@ -152,7 +152,7 @@ class View {
             "<div id='k-needs'>" +
             "<div id='k-wood' class='bar'>wood</div>" +
             "<div id='k-minerals' class='bar'>minerals</div>" +
-            "<div id='k-science' class='bar'>science</div></div>" +
+            "<div id='k-science' class='bar'>science</div>" +
             "<div id='k-coal' class='bar'>coal</div>" +
             "<div id='k-catpower' class='bar'>catpower</div>" +
             '</div>');
@@ -363,11 +363,13 @@ let tick = () => {
         { res: 'wood', job: Game.getJob('woodcutter') },
         { res: 'minerals', job: Game.getJob('miner') },
         { res: 'science', job: Game.getJob('scholar') },
+        { res: 'coal', job: Game.getJob('geologist') },
     ];
     const jobNeeds = new Map(needs);
     jobNeeds.set('wood', needs.get('wood') || 0 + needs.get('beam') || 0 + needs.get('scaffold') || 0);
     jobNeeds.set('minerals', needs.get('minerals') || 0 + needs.get('slab') || 0 + needs.get('titanium') || 0);
     jobNeeds.set('science', needs.get('science') || 0 + needs.get('compedium') || 0 + needs.get('manuscript') || 0);
+    jobNeeds.set('coal', needs.get('coal') || 0 + needs.get('steel') || 0);
     const ratios = list
         .filter(r => jobNeeds.get(r.res))
         .map(r => ({
