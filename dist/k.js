@@ -198,9 +198,6 @@ let tick = () => {
         console.log('KAI: disabled');
         return;
     }
-    if (Game.isFull('faith')) {
-        Game.praise();
-    }
     const academy = getButton('Academy');
     const amphitheatre = getButton('Amphitheatre');
     const aqueduct = getButton('Aqueduct');
@@ -324,6 +321,15 @@ let tick = () => {
             .filter(b => b.model.metadata.unlocked && !b.model.metadata.researched && Game.canAfford(b.model.prices))
             .map(b => new Action('Workshop', b))
             .forEach(a => a.click());
+    }
+    if (Game.ReligionTab.visible) {
+        Game.ReligionTab.rUpgradeButtons
+            .filter(b => b.model.enabled && Game.canAfford(b.model.prices))
+            .map(b => new Action('Religion', b))
+            .forEach(a => a.click());
+        if (Game.isFull('faith')) {
+            Game.praise();
+        }
     }
     const needs = Game.BonfireTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)

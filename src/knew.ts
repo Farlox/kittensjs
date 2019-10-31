@@ -1,8 +1,8 @@
-// needs does not include crafted items: slabs, beams, etc
-// trade for titanium
-// religion upgrades
+// RESOLVED: religion upgrades
+// RESOLVED: needs does not include crafted items: slabs, beams, etc
+// RESOLVED: trade for titanium
 // workshop/science won't click after a reset until one manual click on each tab
-// jobs: hunter, farmer, geologist
+// jobs: hunter, farmer
 // craft amounts
 
 const getButton = (label: string) => {
@@ -30,11 +30,6 @@ let tick = () => {
     if (!Game.view.masterEnabled) {
         console.log('KAI: disabled');
         return;
-    }
-
-    // praise
-    if (Game.isFull('faith')) {
-        Game.praise();
     }
 
     // bonfire
@@ -181,6 +176,18 @@ let tick = () => {
             .forEach(a => a.click());
     }
 
+    // religion
+    if (Game.ReligionTab.visible) {
+        Game.ReligionTab.rUpgradeButtons
+            .filter(b => b.model.enabled && Game.canAfford(b.model.prices))
+            .map(b => new Action('Religion', b))
+            .forEach(a => a.click());
+
+        if (Game.isFull('faith')) {
+            Game.praise();
+        }
+    }
+
     // needs calc
     const needs = Game.BonfireTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
@@ -258,6 +265,9 @@ let tick = () => {
     jobNeeds.set('minerals', needs.get('minerals') || 0 + needs.get('slab') || 0 + needs.get('titanium') || 0); // titanium needs slabs to trade
     jobNeeds.set('science', needs.get('science') || 0 + needs.get('compedium') || 0 + needs.get('manuscript') || 0);
     jobNeeds.set('coal', needs.get('coal') || 0 + needs.get('steel') || 0);
+
+    // list.forEach(j => jobNeeds.set(j.res, needs.get(j.res)));
+    // ['coal', 'steel'].map(r => needs.get(r as ResourceName) || 0).reduce((sum, n) => sum + n, 0);
 
     const ratios: JobRatio[] = list
         .filter(r => jobNeeds.get(r.res))

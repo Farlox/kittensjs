@@ -1,4 +1,4 @@
-type TabName = 'Bonfire' | 'Science' | 'Workshop';
+type TabName = 'Bonfire' | 'Science' | 'Workshop' | 'Religion';
 type JobName = 'woodcutter' | 'farmer' | 'scholar' | 'hunter' | 'miner' | 'geologist';
 type ResourceName =
     | 'catnip'

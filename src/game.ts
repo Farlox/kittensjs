@@ -1,10 +1,10 @@
-interface Button<T> {
+interface Button<TMetadata> {
     model: {
         enabled: boolean;
         prices: Price[];
         resourceIsLimited: boolean;
         visible: boolean;
-        metadata: T;
+        metadata: TMetadata;
         on: number;
 
         [key: string]: any;
@@ -26,6 +26,11 @@ interface Price {
 interface Tab<T> {
     visible: boolean;
     buttons: Button<T>[];
+}
+
+interface IReligionTab extends Tab<any> {
+    praiseBtn: any;
+    rUpgradeButtons: Button<any>[];
 }
 
 interface Resource {
@@ -107,7 +112,7 @@ interface GamePage {
     tabs: Tab<any>[];
     libraryTab: Tab<Tech>;
     workshopTab: Tab<Upgrade>;
-    religionTab: Tab<any> & { praiseBtn: any };
+    religionTab: Tab<any> & IReligionTab;
 
     bld: {
         get(buildingName: BuildingName): Building;
