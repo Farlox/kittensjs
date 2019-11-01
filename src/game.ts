@@ -138,6 +138,11 @@ interface GamePage {
         get(race: RaceName): Race;
         tradeAll(race: Race): void;
     };
+
+    globalEffectsCached: {
+        energyProduction: number;
+        energyConsumption: number;
+    };
 }
 
 class Game {
@@ -233,8 +238,20 @@ class Game {
         return true;
     }
 
-    // selecting tabs
+    // energy
+    static get energyProduction() {
+        return gamePage.globalEffectsCached.energyProduction;
+    }
 
+    static get energyConsumption() {
+        return gamePage.globalEffectsCached.energyConsumption;
+    }
+
+    static get netEnergy() {
+        return Game.energyProduction - Game.energyConsumption;
+    }
+
+    // selecting tabs
     static prevTab: string;
 
     static pushTab(tabLabel: string) {

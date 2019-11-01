@@ -4,6 +4,7 @@
 // workshop/science won't click after a reset until one manual click on each tab
 // jobs: hunter, farmer
 // craft amounts
+// buildings: biolab
 
 const getButton = (label: string) => {
     return Game.BonfireTab.buttons.find(b => b.opts.name === label);
@@ -75,7 +76,16 @@ let tick = () => {
             button: calciner,
             prereq: () => Game.getResourcePerTick('minerals') > 1.5 && Game.getResourcePerTick('oil') > 0.02,
         },
+        {
+            button: getButton('Accelerator'),
+            prereq: () => Game.getResourcePerTick('titanium') > 0.1 && Game.netEnergy > 2,
+        },
+        {
+            button: getButton('Reactor'),
+            prereq: () => Game.getResourcePerTick('uranium') > 0.002, // gamePage.bld.buildingsData.find(b => b.name === 'reactor').effects.uraniumPerTick
+        },
         { button: amphitheatre },
+        { button: getButton('Chapel') },
         { button: temple },
         { button: tradepost },
         { button: hut, prereq: Game.isSpringSummer },
@@ -151,6 +161,10 @@ let tick = () => {
             refined: 'alloy',
             shouldCraft: () =>
                 Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
+        },
+        {
+            refined: 'kerosene',
+            shouldCraft: () => Game.isFull('oil'),
         },
     ];
 
@@ -281,7 +295,7 @@ let tick = () => {
     Game.view.jobRatios = ratios;
 
     if (Game.freeKittens > 0 && ratios.length > 0) {
-        console.log(`KAI: Job assigning free to ${ratios[0].job.title}`);
+        // console.log(`KAI: Job assigning free to ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);
     } else if (Game.isSpringSummer() === true && Game.getResourcePerTick('catnip') <= 0 && ratios.length > 0) {
         const unJob = ratios[ratios.length - 1].job;
@@ -291,7 +305,7 @@ let tick = () => {
     } else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.85) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
-        console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
+        // console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
         Game.unassignJob(unJob);
         Game.assignJob(job);
     }

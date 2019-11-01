@@ -62,6 +62,15 @@ class Game {
         }
         return true;
     }
+    static get energyProduction() {
+        return gamePage.globalEffectsCached.energyProduction;
+    }
+    static get energyConsumption() {
+        return gamePage.globalEffectsCached.energyConsumption;
+    }
+    static get netEnergy() {
+        return Game.energyProduction - Game.energyConsumption;
+    }
     static pushTab(tabLabel) {
         Game.prevTab = $('a.tab.activeTab')[0].innerText;
         $('a.tab:contains("' + tabLabel + '")')[0].click();
@@ -239,7 +248,16 @@ let tick = () => {
             button: calciner,
             prereq: () => Game.getResourcePerTick('minerals') > 1.5 && Game.getResourcePerTick('oil') > 0.02,
         },
+        {
+            button: getButton('Accelerator'),
+            prereq: () => Game.getResourcePerTick('titanium') > 0.1 && Game.netEnergy > 2,
+        },
+        {
+            button: getButton('Reactor'),
+            prereq: () => Game.getResourcePerTick('uranium') > 0.002,
+        },
         { button: amphitheatre },
+        { button: getButton('Chapel') },
         { button: temple },
         { button: tradepost },
         { button: hut, prereq: Game.isSpringSummer },
@@ -304,6 +322,10 @@ let tick = () => {
         {
             refined: 'alloy',
             shouldCraft: () => Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
+        },
+        {
+            refined: 'kerosene',
+            shouldCraft: () => Game.isFull('oil'),
         },
     ];
     buildQueue
@@ -386,7 +408,6 @@ let tick = () => {
         .sort((a, b) => a.ratio - b.ratio);
     Game.view.jobRatios = ratios;
     if (Game.freeKittens > 0 && ratios.length > 0) {
-        console.log(`KAI: Job assigning free to ${ratios[0].job.title}`);
         Game.assignJob(ratios[0].job);
     }
     else if (Game.isSpringSummer() === true && Game.getResourcePerTick('catnip') <= 0 && ratios.length > 0) {
@@ -398,7 +419,6 @@ let tick = () => {
     else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.85) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
-        console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
         Game.unassignJob(unJob);
         Game.assignJob(job);
     }
