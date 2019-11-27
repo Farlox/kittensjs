@@ -79,6 +79,9 @@ class Game {
         $('a.tab:contains("' + Game.prevTab + '")')[0].click();
         Game.prevTab = null;
     }
+    static get maxKittens() {
+        return gamePage.village.maxKittens;
+    }
     static get freeKittens() {
         return gamePage.village.getFreeKittens();
     }
@@ -98,6 +101,8 @@ class Game {
         }
     }
 }
+Game.lastKittenCount = -1;
+Game.kittenLog = [];
 Game.isSpringSummer = () => gamePage.calendar.season < 2;
 class Action {
     constructor(tabName, button) {
@@ -201,7 +206,13 @@ const getButton = (label) => {
 let tick = () => {
     if ($('input#observeBtn').length === 1) {
         $('input#observeBtn').click();
-        console.log('KAI: Observed the sky');
+    }
+    if (Game.lastKittenCount < Game.maxKittens) {
+        Game.lastKittenCount = Game.maxKittens;
+        Game.kittenLog.push({
+            totalKittens: Game.maxKittens,
+            timestamp: Date.now(),
+        });
     }
     if (!Game.view.masterEnabled) {
         console.log('KAI: disabled');
@@ -241,6 +252,7 @@ let tick = () => {
         { button: library },
         { button: academy },
         { button: observatory },
+        { button: getButton('Bio Lab') },
         { button: mine },
         { button: quarry },
         { button: oilWell },
@@ -270,20 +282,24 @@ let tick = () => {
                 Game.getResourcePerTick('minerals') > Game.getResourcePerTick('iron'),
         },
         { button: magneto, prereq: () => Game.getResourcePerTick('oil') > 0.05 },
-        { button: steamworks, prereq: () => magneto.model.on > steamworks.model.on },
+        { button: steamworks, prereq: () => magneto !== undefined && magneto.model.on > steamworks.model.on },
         { button: workshop },
         { button: barn },
         { button: warehouse },
         { button: harbour },
     ];
     const craftQueue = [
-        { refined: 'wood', refinedAmount: 10, shouldCraft: () => Game.isFull('catnip') },
+        { refined: 'wood', refinedAmount: () => 10, shouldCraft: () => Game.isFull('catnip') },
         { refined: 'beam', shouldCraft: () => Game.isFull('wood') },
         {
             refined: 'scaffold',
             shouldCraft: () => Game.getResource('beam').value - 50 > Game.getResource('scaffold').value,
         },
-        { refined: 'slab', shouldCraft: () => Game.isFull('minerals') },
+        {
+            refined: 'slab',
+            shouldCraft: () => Game.isFull('minerals'),
+            refinedAmount: () => Math.floor(Game.getResourcePerTick('minerals') / 25),
+        },
         { refined: 'plate', shouldCraft: () => Game.isFull('iron') },
         {
             refined: 'steel',
@@ -302,8 +318,9 @@ let tick = () => {
         { refined: 'parchment', shouldCraft: () => Game.getResource('furs').value > 175 },
         {
             refined: 'manuscript',
-            shouldCraft: () => Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value &&
-                Game.getResource('culture').value > 400,
+            shouldCraft: needs => Game.getResource('culture').value > 400 &&
+                (Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value ||
+                    (needs.get('manuscript') > 0 && (!needs.has('parchment') || needs.get('parchment') === 0))),
         },
         {
             refined: 'compedium',
@@ -323,13 +340,18 @@ let tick = () => {
             refined: 'alloy',
             shouldCraft: () => Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
         },
+        { refined: 'eludium', shouldCraft: () => Game.isFull('unobtainium') },
         {
             refined: 'kerosene',
             shouldCraft: () => Game.isFull('oil'),
         },
+        {
+            refined: 'thorium',
+            shouldCraft: () => Game.isFull('uranium'),
+        },
     ];
     buildQueue
-        .filter(b => b.button && b.button.model.enabled && (b.prereq === undefined || b.prereq()))
+        .filter(b => b.button !== undefined && b.button.model.enabled && (b.prereq === undefined || b.prereq()))
         .map(b => new Action('Bonfire', b.button))
         .forEach(a => a.click());
     if (Game.ScienceTab.visible) {
@@ -357,47 +379,50 @@ let tick = () => {
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
-        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
+        .map(price => (Object.assign(Object.assign({}, price), { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), new Map());
     Game.ScienceTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
-        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
+        .map(price => (Object.assign(Object.assign({}, price), { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     Game.WorkshopTab.buttons
         .filter(b => b.model.visible && !b.model.enabled && !b.model.resourceIsLimited)
         .map(b => b.model.prices)
         .reduce((flat, next) => flat.concat(next), [])
-        .map(price => (Object.assign({}, price, { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
+        .map(price => (Object.assign(Object.assign({}, price), { val: Math.max(0, price.val - Game.getResource(price.name).value) })))
         .reduce((needs, price) => needs.set(price.name, needs.get(price.name) ? needs.get(price.name) + price.val : price.val), needs);
     craftQueue
         .filter(c => c.shouldCraft(needs))
-        .map(c => Game.getCraft(c.refined))
-        .filter(c => c.unlocked && Game.canAfford(c.prices))
+        .map(c => (Object.assign(Object.assign({}, c), { craft: Game.getCraft(c.refined) })))
+        .filter(c => c.craft.unlocked && Game.canAfford(c.craft.prices))
         .forEach(c => {
-        Game.craft(c.name, 1);
+        Game.craft(c.craft.name, c.refinedAmount ? Math.max(c.refinedAmount(), 1) : 1);
     });
     if (Game.isFull('manpower')) {
         const zebras = Game.getRace('zebras');
-        if (zebras.unlocked) {
+        if (zebras.unlocked && !Game.isFull('titanium')) {
             console.log('KAI: trading with zebras');
             Game.tradeAll(zebras);
         }
-        console.log('KAI: hunting');
         gamePage.village.huntAll();
     }
     const list = [
-        { res: 'wood', job: Game.getJob('woodcutter') },
+        { res: 'wood', job: Game.getJob('woodcutter'), crafted: ['beam', 'scaffold'] },
         { res: 'minerals', job: Game.getJob('miner') },
         { res: 'science', job: Game.getJob('scholar') },
         { res: 'coal', job: Game.getJob('geologist') },
     ];
     const jobNeeds = new Map(needs);
-    jobNeeds.set('wood', needs.get('wood') || 0 + needs.get('beam') || 0 + needs.get('scaffold') || 0);
-    jobNeeds.set('minerals', needs.get('minerals') || 0 + needs.get('slab') || 0 + needs.get('titanium') || 0);
-    jobNeeds.set('science', needs.get('science') || 0 + needs.get('compedium') || 0 + needs.get('manuscript') || 0);
-    jobNeeds.set('coal', needs.get('coal') || 0 + needs.get('steel') || 0);
+    jobNeeds.set('wood', (needs.get('wood') || 0) +
+        (needs.has('beam') ? needs.get('beam') * 175 : 0) +
+        (needs.has('scaffold') ? needs.get('scaffold') * 175 * 50 : 0));
+    jobNeeds.set('minerals', (needs.get('minerals') || 0) +
+        (needs.has('slab') ? needs.get('slab') * 250 : 0) +
+        (needs.has('titanium') ? needs.get('titanium') * 50 : 0));
+    jobNeeds.set('science', (needs.get('science') || 0) + (needs.has('compedium') ? needs.get('compedium') * 10000 : 0));
+    jobNeeds.set('coal', (needs.get('coal') || 0) + (needs.has('steel') ? needs.get('steel') * 100 : 0));
     const ratios = list
         .filter(r => jobNeeds.get(r.res))
         .map(r => ({
@@ -405,6 +430,7 @@ let tick = () => {
         job: r.job,
         ratio: Game.getResourcePerTick(r.res) / jobNeeds.get(r.res),
     }))
+        .filter(jr => jr.job.unlocked)
         .sort((a, b) => a.ratio - b.ratio);
     Game.view.jobRatios = ratios;
     if (Game.freeKittens > 0 && ratios.length > 0) {
@@ -416,13 +442,13 @@ let tick = () => {
         Game.unassignJob(unJob);
         Game.assignJob(Game.getJob('farmer'));
     }
-    else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.85) {
+    else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.8) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
         Game.unassignJob(unJob);
         Game.assignJob(job);
     }
-    const viewModel = new ViewModel(needs);
+    const viewModel = new ViewModel(jobNeeds);
     Game.view.model = viewModel;
 };
 if (!Game.view) {

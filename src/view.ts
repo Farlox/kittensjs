@@ -22,7 +22,7 @@ class ViewModel {
 }
 
 class View {
-    private panel: HTMLDivElement;
+    private panel: JQuery<HTMLDivElement>;
 
     constructor() {
         const left = $('#leftColumnViewport');
@@ -65,7 +65,7 @@ class View {
     }
 
     public get masterEnabled(): boolean {
-        const toggle: HTMLInputElement = $('#k-master-toggle')[0];
+        const toggle: HTMLInputElement = $('#k-master-toggle')[0] as any;
         return toggle && toggle.checked;
     }
 

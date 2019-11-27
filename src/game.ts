@@ -125,6 +125,7 @@ interface GamePage {
     village: {
         getJob(jobName: JobName);
         assignJob(job: Job, amt: number);
+        maxKittens: number;
         getFreeKittens(): number;
         sim: {
             removeJob(jobName: JobName);
@@ -145,9 +146,17 @@ interface GamePage {
     };
 }
 
+interface KittenLogEntry {
+    totalKittens: number;
+    timestamp: number;
+}
+
 class Game {
     static intervalId?: number;
     static view: View;
+
+    static lastKittenCount: number = -1;
+    static kittenLog: KittenLogEntry[] = [];
 
     static isSpringSummer = () => gamePage.calendar.season < 2;
 
@@ -266,6 +275,10 @@ class Game {
 
     // jobs
 
+    static get maxKittens() {
+        return gamePage.village.maxKittens;
+    }
+
     static get freeKittens() {
         return gamePage.village.getFreeKittens();
     }
@@ -290,5 +303,4 @@ class Game {
     }
 }
 
-declare const $: any;
 declare const gamePage: GamePage;

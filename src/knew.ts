@@ -1,9 +1,7 @@
-// RESOLVED: religion upgrades
-// RESOLVED: needs does not include crafted items: slabs, beams, etc
-// RESOLVED: trade for titanium
 // workshop/science won't click after a reset until one manual click on each tab
-// jobs: hunter, farmer
-// craft amounts
+// steamworks never turns on
+// explore for trade partners
+// jobs: priest, hunter, farmer
 // buildings: biolab
 
 const getButton = (label: string) => {
@@ -17,7 +15,7 @@ interface BuildDef {
 
 interface CraftDef {
     refined: ResourceName;
-    refinedAmount?: number;
+    refinedAmount?: () => number;
     shouldCraft: (needs: Map<ResourceName, number>) => boolean;
 }
 
@@ -25,7 +23,16 @@ let tick = () => {
     // observe the sky
     if ($('input#observeBtn').length === 1) {
         $('input#observeBtn').click();
-        console.log('KAI: Observed the sky');
+        // console.log('KAI: Observed the sky');
+    }
+
+    // log the kitten population growth
+    if (Game.lastKittenCount < Game.maxKittens) {
+        Game.lastKittenCount = Game.maxKittens;
+        Game.kittenLog.push({
+            totalKittens: Game.maxKittens,
+            timestamp: Date.now(),
+        });
     }
 
     if (!Game.view.masterEnabled) {
@@ -69,6 +76,7 @@ let tick = () => {
         { button: library },
         { button: academy },
         { button: observatory },
+        { button: getButton('Bio Lab') },
         { button: mine },
         { button: quarry },
         { button: oilWell },
@@ -101,7 +109,7 @@ let tick = () => {
         },
         { button: magneto, prereq: () => Game.getResourcePerTick('oil') > 0.05 },
         // TODO: should be gamePage.bld.buildingsData.find(b => b.name === 'steamworks').val.  ".on" will only count the ones that are on, they aren't by default, and we don't turn them on via script yet.
-        { button: steamworks, prereq: () => magneto.model.on > steamworks.model.on },
+        { button: steamworks, prereq: () => magneto !== undefined && magneto.model.on > steamworks.model.on },
         { button: workshop },
         { button: barn },
         { button: warehouse },
@@ -109,13 +117,17 @@ let tick = () => {
     ];
 
     const craftQueue: CraftDef[] = [
-        { refined: 'wood', refinedAmount: 10, shouldCraft: () => Game.isFull('catnip') },
+        { refined: 'wood', refinedAmount: () => 10, shouldCraft: () => Game.isFull('catnip') },
         { refined: 'beam', shouldCraft: () => Game.isFull('wood') },
         {
             refined: 'scaffold',
             shouldCraft: () => Game.getResource('beam').value - 50 > Game.getResource('scaffold').value,
         },
-        { refined: 'slab', shouldCraft: () => Game.isFull('minerals') },
+        {
+            refined: 'slab',
+            shouldCraft: () => Game.isFull('minerals'),
+            refinedAmount: () => Math.floor(Game.getResourcePerTick('minerals') / 25), // 250 per craft / 10 game ticks per kai loop.
+        },
         { refined: 'plate', shouldCraft: () => Game.isFull('iron') },
         {
             refined: 'steel',
@@ -136,9 +148,10 @@ let tick = () => {
         { refined: 'parchment', shouldCraft: () => Game.getResource('furs').value > 175 },
         {
             refined: 'manuscript',
-            shouldCraft: () =>
-                Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value &&
-                Game.getResource('culture').value > 400,
+            shouldCraft: needs =>
+                Game.getResource('culture').value > 400 &&
+                (Game.getResource('parchment').value - 25 > Game.getResource('manuscript').value ||
+                    (needs.get('manuscript') > 0 && (!needs.has('parchment') || needs.get('parchment') === 0))),
         },
         {
             refined: 'compedium',
@@ -162,15 +175,20 @@ let tick = () => {
             shouldCraft: () =>
                 Game.isFull('titanium') && Game.getResource('steel').value - 75 > Game.getResource('alloy').value,
         },
+        { refined: 'eludium', shouldCraft: () => Game.isFull('unobtainium') },
         {
             refined: 'kerosene',
             shouldCraft: () => Game.isFull('oil'),
+        },
+        {
+            refined: 'thorium',
+            shouldCraft: () => Game.isFull('uranium'),
         },
     ];
 
     // bonfire
     buildQueue
-        .filter(b => b.button && b.button.model.enabled && (b.prereq === undefined || b.prereq()))
+        .filter(b => b.button !== undefined && b.button.model.enabled && (b.prereq === undefined || b.prereq()))
         .map(b => new Action('Bonfire', b.button))
         .forEach(a => a.click());
 
@@ -248,40 +266,53 @@ let tick = () => {
     // craft
     craftQueue
         .filter(c => c.shouldCraft(needs))
-        .map(c => Game.getCraft(c.refined))
-        .filter(c => c.unlocked && Game.canAfford(c.prices))
+        .map(c => ({
+            ...c,
+            craft: Game.getCraft(c.refined),
+        }))
+        .filter(c => c.craft.unlocked && Game.canAfford(c.craft.prices))
         .forEach(c => {
             // console.log(`KAI: crafting ${c.name}`);
-            Game.craft(c.name, 1);
+            Game.craft(c.craft.name, c.refinedAmount ? Math.max(c.refinedAmount(), 1) : 1);
         });
 
     // hunt or trade
     if (Game.isFull('manpower')) {
         const zebras = Game.getRace('zebras');
-        if (zebras.unlocked) {
+        if (zebras.unlocked && !Game.isFull('titanium')) {
             console.log('KAI: trading with zebras');
             Game.tradeAll(zebras);
         }
 
-        console.log('KAI: hunting');
+        // console.log('KAI: hunting');
         gamePage.village.huntAll();
     }
 
     // jobs
-    const list: { res: ResourceName; job: Job }[] = [
-        { res: 'wood', job: Game.getJob('woodcutter') },
+    const list: { res: ResourceName; job: Job; crafted?: ResourceName[] }[] = [
+        { res: 'wood', job: Game.getJob('woodcutter'), crafted: ['beam', 'scaffold'] },
         { res: 'minerals', job: Game.getJob('miner') },
         { res: 'science', job: Game.getJob('scholar') },
         { res: 'coal', job: Game.getJob('geologist') },
     ];
     const jobNeeds = new Map(needs);
-    jobNeeds.set('wood', needs.get('wood') || 0 + needs.get('beam') || 0 + needs.get('scaffold') || 0);
-    jobNeeds.set('minerals', needs.get('minerals') || 0 + needs.get('slab') || 0 + needs.get('titanium') || 0); // titanium needs slabs to trade
-    jobNeeds.set('science', needs.get('science') || 0 + needs.get('compedium') || 0 + needs.get('manuscript') || 0);
-    jobNeeds.set('coal', needs.get('coal') || 0 + needs.get('steel') || 0);
-
-    // list.forEach(j => jobNeeds.set(j.res, needs.get(j.res)));
-    // ['coal', 'steel'].map(r => needs.get(r as ResourceName) || 0).reduce((sum, n) => sum + n, 0);
+    jobNeeds.set(
+        'wood',
+        (needs.get('wood') || 0) +
+            (needs.has('beam') ? needs.get('beam') * 175 : 0) +
+            (needs.has('scaffold') ? needs.get('scaffold') * 175 * 50 : 0)
+    );
+    jobNeeds.set(
+        'minerals',
+        (needs.get('minerals') || 0) +
+            (needs.has('slab') ? needs.get('slab') * 250 : 0) +
+            (needs.has('titanium') ? needs.get('titanium') * 50 : 0) // titanium needs slabs to trade
+    );
+    jobNeeds.set(
+        'science',
+        (needs.get('science') || 0) + (needs.has('compedium') ? needs.get('compedium') * 10000 : 0)
+    );
+    jobNeeds.set('coal', (needs.get('coal') || 0) + (needs.has('steel') ? needs.get('steel') * 100 : 0));
 
     const ratios: JobRatio[] = list
         .filter(r => jobNeeds.get(r.res))
@@ -290,6 +321,7 @@ let tick = () => {
             job: r.job,
             ratio: Game.getResourcePerTick(r.res) / jobNeeds.get(r.res),
         }))
+        .filter(jr => jr.job.unlocked)
         .sort((a, b) => a.ratio - b.ratio);
 
     Game.view.jobRatios = ratios;
@@ -302,7 +334,7 @@ let tick = () => {
         console.log(`KAI: Job - need food, swapped ${unJob.title} to farmer`);
         Game.unassignJob(unJob);
         Game.assignJob(Game.getJob('farmer'));
-    } else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.85) {
+    } else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.8) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
         // console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
@@ -311,7 +343,7 @@ let tick = () => {
     }
 
     // UI
-    const viewModel = new ViewModel(needs);
+    const viewModel = new ViewModel(jobNeeds);
     Game.view.model = viewModel;
 };
 
