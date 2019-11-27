@@ -445,8 +445,10 @@ let tick = () => {
     else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.8) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
-        Game.unassignJob(unJob);
-        Game.assignJob(job);
+        if (unJob.value > 0) {
+            Game.unassignJob(unJob);
+            Game.assignJob(job);
+        }
     }
     const viewModel = new ViewModel(jobNeeds);
     Game.view.model = viewModel;

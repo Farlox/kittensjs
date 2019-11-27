@@ -337,9 +337,11 @@ let tick = () => {
     } else if (ratios.length > 1 && ratios[0].ratio / ratios[ratios.length - 1].ratio < 0.8) {
         const job = ratios[0].job;
         const unJob = ratios[ratios.length - 1].job;
-        // console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
-        Game.unassignJob(unJob);
-        Game.assignJob(job);
+        if (unJob.value > 0) {
+            // console.log(`KAI: Job - swapped ${unJob.name} to ${job.name}`);
+            Game.unassignJob(unJob);
+            Game.assignJob(job);
+        }
     }
 
     // UI
