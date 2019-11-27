@@ -56,6 +56,7 @@ var k = {
         { label: "Steamworks", name: "steamworks", prereq: function() { return gamePage.globalEffectsCached.energyProduction - gamePage.globalEffectsCached.energyConsumption < 2; } },
         { label: "Tradepost", name: "tradepost" },
         { label: "Amphitheatre", name: "amphitheatre" },
+        { label: "Mint", name: "mint", prereq: function() { return gamePage.getResourcePerTick('furs', true) < 0 || gamePage.getResourcePerTick('ivory', true) < 0; } }
     ],
     bld: {
         unicornPasture: {},
@@ -511,7 +512,7 @@ var goi = setInterval(function() {
     }
 
     if (k.needs.concrate > 0 &&
-        gamePage.resPool.resourceMap.concrate.value < 0.01 * gamePage.resPool.resourceMap.slab.value &&
+        gamePage.resPool.resourceMap.concrate.value < 0.1 * gamePage.resPool.resourceMap.slab.value &&
         k.canAfford(gamePage.workshop.getCraftPrice(gamePage.workshop.getCraft('concrate'))))
     {
         k.log(1, 'crafting concrete');

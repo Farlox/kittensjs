@@ -1,0 +1,24 @@
+{
+    "name": "@farlox/kittenjs",
+    "version": "0.1.0",
+    "description": "Automated script for Kittens Game",
+    "main": "dist/k.js",
+    "scripts": {
+        "build": "tsc && cat dist/const.js dist/game.js dist/action.js dist/view.js dist/knew.js > dist/k.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Farlox/kittensjs.git"
+    },
+    "author": "Farlox",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/Farlox/kittensjs/issues"
+    },
+    "homepage": "https://github.com/Farlox/kittensjs#readme",
+    "devDependencies": {
+        "@types/jquery": "^3.3.31",
+        "typescript": "^3.7.2"
+    }
+}
